@@ -1,0 +1,15 @@
+services:
+  asm:
+    build: .
+    platform: linux/amd64
+    container_name: rain
+    volumes:
+      - ./src:/root/asm
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+
