@@ -7,17 +7,18 @@
     .text
     .globl draw_home
 
-splash_0: .asciz "                      ███                                                   ████      █████"
-splash_1: .asciz "                     ▒▒▒                                                   ▒▒███     ▒▒███"
-splash_2: .asciz " ████████   ██████   ████  ████████      █████ ███ █████  ██████  ████████  ▒███   ███████"
-splash_3: .asciz "▒▒███▒▒███ ▒▒▒▒▒███ ▒▒███ ▒▒███▒▒███    ▒▒███ ▒███▒▒███  ███▒▒███▒▒███▒▒███ ▒███  ███▒▒███"
-splash_4: .asciz " ▒███ ▒▒▒   ███████  ▒███  ▒███ ▒███     ▒███ ▒███ ▒███ ▒███ ▒███ ▒███ ▒▒▒  ▒███ ▒███ ▒███"
-splash_5: .asciz " ▒███      ███▒▒███  ▒███  ▒███ ▒███     ▒▒███████████  ▒███ ▒███ ▒███      ▒███ ▒███ ▒███"
-splash_6: .asciz " █████    ▒▒████████ █████ ████ █████     ▒▒████▒████   ▒▒██████  █████     █████▒▒████████"
-splash_7: .asciz "▒▒▒▒▒      ▒▒▒▒▒▒▒▒ ▒▒▒▒▒ ▒▒▒▒ ▒▒▒▒▒       ▒▒▒▒ ▒▒▒▒     ▒▒▒▒▒▒  ▒▒▒▒▒     ▒▒▒▒▒  ▒▒▒▒▒▒▒▒"
+splash_0: .asciz "   ▄███████▄    ▄████████  ▄█  ███▄▄▄▄         ▄█     █▄   ▄██████▄     ▄████████  ▄█       ████████▄"
+splash_1: .asciz "  ███    ███   ███    ███ ███  ███▀▀▀██▄      ███     ███ ███    ███   ███    ███ ███       ███   ▀███"
+splash_2: .asciz "  ███    ███   ███    ███ ███▌ ███   ███      ███     ███ ███    ███   ███    ███ ███       ███    ███"
+splash_3: .asciz "  ███    ███   ███    ███ ███▌ ███   ███      ███     ███ ███    ███  ▄███▄▄▄▄██▀ ███       ███    ███"
+splash_4: .asciz "▀█████████▀  ▀███████████ ███▌ ███   ███      ███     ███ ███    ███ ▀▀███▀▀▀▀▀   ███       ███    ███"
+splash_5: .asciz "  ███          ███    ███ ███  ███   ███      ███     ███ ███    ███ ▀███████████ ███       ███    ███"
+splash_6: .asciz "  ███          ███    ███ ███  ███   ███      ███ ▄█▄ ███ ███    ███   ███    ███ ███▌    ▄ ███   ▄███"
+splash_7: .asciz " ▄████▀        ███    █▀  █▀    ▀█   █▀        ▀███▀███▀   ▀██████▀    ███    ███ █████▄▄██ ████████▀"
+splash_8: .asciz "                                                                       ███    ███ ▀"
 
-splash:  .quad splash_0, splash_1, splash_2, splash_3, splash_4, splash_5, splash_6, splash_7
-.equ SPLASH_COUNT, 8
+splash:  .quad splash_0, splash_1, splash_2, splash_3, splash_4, splash_5, splash_6, splash_7, splash_8
+.equ SPLASH_COUNT, 9
 
 home_text_0: .asciz "                it's like rain world, but made in assembly. thus, in pain."
 home_text_1: .asciz ""
@@ -40,11 +41,11 @@ draw_home:
     shlq $8, %rdi               # COLOR_PAIR(n) is just n << 8
     call attron
 
-    # draw_lines(splash, SPLASH_COUNT, 6, 14), 91 wide so centred in 120
+    # draw_lines(splash, SPLASH_COUNT, 5, 8), 103 wide so centred in 120
     movq $splash, %rdi
     movq $SPLASH_COUNT, %rsi
-    movq $6, %rdx
-    movq $14, %rcx
+    movq $5, %rdx
+    movq $8, %rcx
     call draw_lines
 
     # attroff(COLOR_PAIR(1))
