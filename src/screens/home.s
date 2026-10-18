@@ -1,13 +1,6 @@
-    #=============================================================================
-    # painworld — src/screens/home.s
-    # Home screen: the big title from the README + the menu.
-    # The keys are handled in inputs.s.
-    #
-    # The title uses Unicode block characters, which is why main.s calls
-    # setlocale() and we link with ncursesw (the "wide character" ncurses).
-    # The strings are UTF-8: each block character is 3 bytes in memory, but one
-    # cell on screen.
-    #=============================================================================
+# home.s - title (the one from the README) + menu, keys are in inputs.s
+# the title is unicode blocks, so it's UTF-8: 3 bytes per block in memory,
+# 1 cell on screen. that's why main.s calls setlocale and we link ncursesw.
 
     .include "constants.inc"
 
@@ -37,27 +30,24 @@ home_text_6: .asciz "                                        x     quit   "
 home_text:  .quad home_text_0, home_text_1, home_text_2, home_text_3, home_text_4, home_text_5, home_text_6
 .equ HOME_TEXT_COUNT, 7
 
-    #-----------------------------------------------------------------------------
-    # void draw_home(void)
-    #-----------------------------------------------------------------------------
 draw_home:
     # prologue
     pushq %rbp
     movq  %rsp, %rbp
 
-    # attron(COLOR_PAIR(1)): the title in P1's green
+    # title in P1's green: attron(COLOR_PAIR(1))
     movq $1, %rdi
     shlq $8, %rdi               # COLOR_PAIR(n) is just n << 8
     call attron
 
-    # draw_lines(splash, SPLASH_COUNT, 6, 14)       (91 wide, centred in 120)
+    # draw_lines(splash, SPLASH_COUNT, 6, 14), 91 wide so centred in 120
     movq $splash, %rdi
     movq $SPLASH_COUNT, %rsi
     movq $6, %rdx
     movq $14, %rcx
     call draw_lines
 
-    # attroff(COLOR_PAIR(1)): back to normal colours
+    # attroff(COLOR_PAIR(1))
     movq $1, %rdi
     shlq $8, %rdi
     call attroff

@@ -1,7 +1,4 @@
-    #=============================================================================
-    # painworld — src/screens/credits.s
-    # Credits screen. Enter goes back to the menu (inputs.s).
-    #=============================================================================
+# credits.s - who made it
 
     .text
     .globl draw_credits
@@ -29,9 +26,6 @@ credits_text_10: .asciz "        Enter: back to menu"
 credits_text:  .quad credits_text_0, credits_text_1, credits_text_2, credits_text_3, credits_text_4, credits_text_5, credits_text_6, credits_text_7, credits_text_8, credits_text_9, credits_text_10
 .equ CREDITS_TEXT_COUNT, 11
 
-    #-----------------------------------------------------------------------------
-    # void draw_credits(void)
-    #-----------------------------------------------------------------------------
 draw_credits:
     # prologue
     pushq %rbp

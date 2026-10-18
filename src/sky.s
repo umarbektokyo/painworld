@@ -1,17 +1,11 @@
-    #=============================================================================
-    # painworld — src/sky.s
-    # The sky "shader": a tiny function that is run for every empty cell and
-    # returns how cloudy that spot of sky is right now (0, 1 or 2).
-    #
-    # Like a fragment shader, it only looks at its position (col, row) and the
-    # time (frame_count). It adds three sine waves that drift at different
-    # speeds and directions, plus a bias that makes the top of the screen more
-    # cloudy. Where the sum is big we draw a dim cloud: slow storm clouds.
-    #
-    # No floats: sin() comes from a table of 64 bytes, one full wave, values
-    # -8..8. sine[i & 63] wraps around, so any index works (even negative ones,
-    # because & 63 keeps the low 6 bits of a two's complement number).
-    #=============================================================================
+# sky.s - the sky "shader"
+#
+# runs for every empty cell and says how cloudy that spot is right now (0, 1, 2).
+# like a fragment shader it only knows its position (col, row) and the time
+# (frame_count). three sine waves drifting at different speeds + "more clouds
+# at the top" = slow storm clouds.
+# no floats: sin comes from a 64 byte table (one full wave, -8..8). i & 63 wraps
+# any index around, even negative ones (two's complement keeps the low bits).
 
     .include "constants.inc"
 
@@ -24,19 +18,13 @@ sine:
     .byte   0,  -1,  -2,  -2,  -3,  -4,  -4,  -5,  -6,  -6,  -7,  -7,  -7,  -8,  -8,  -8
     .byte  -8,  -8,  -8,  -8,  -7,  -7,  -7,  -6,  -6,  -5,  -4,  -4,  -3,  -2,  -2,  -1
 
-    #-----------------------------------------------------------------------------
-    # long sky_shade(long col /* %rdi */, long row /* %rsi */) -> %rax
-    #
-    #   t = frame_count
-    #   v  = sine[(col + t/8) & 63]                     big slow wave
-    #   v += sine[(col*3 - row*4 - t/4) & 63]           diagonal, the other way
-    #   v += sine[(row*5 + col + col/4 + t/16) & 63]    very slow, mostly vertical
-    #   v += SKY_BIAS_ROW - row                         cloudy at the top, clear
-    #                                                   lower down
-    # (the three waves repeat every 64, ~21 and ~51 columns, so together they
-    #  don't visibly repeat across the 120 columns)
-    #   return 2 if v > SKY_THICK, 1 if v > SKY_THIN, else 0
-    #-----------------------------------------------------------------------------
+# long sky_shade(long col /* %rdi */, long row /* %rsi */) -> %rax
+#   v  = sine[(col + t/8) & 63]                    big slow wave
+#   v += sine[(col*3 - row*4 - t/4) & 63]          diagonal, other direction
+#   v += sine[(row*5 + col + col/4 + t/16) & 63]   very slow
+#   v += SKY_BIAS_ROW - row                        cloudy up top, clear below
+#   2 if v > SKY_THICK, 1 if v > SKY_THIN, else 0
+# (waves repeat every 64, ~21 and ~51 cols, so no visible pattern across 120)
 sky_shade:
     # prologue
     pushq %rbp
@@ -49,7 +37,7 @@ sky_shade:
     shrq $3, %rax               # t / 8
     addq %rdi, %rax
     andq $63, %rax
-    movsbq sine(%rax), %r9      # r9 = v  (movsbq: sign-extend the byte)
+    movsbq sine(%rax), %r9      # r9 = v, movsbq sign-extends the byte
 
     # v += sine[(col*3 - row*4 - t/4) & 63]
     movq %rdi, %rax
@@ -83,7 +71,6 @@ sky_shade:
     subq %rsi, %rax
     addq %rax, %r9
 
-    # v -> 0, 1 or 2
     movq $2, %rax
     cmpq $SKY_THICK, %r9
     jg   .sky_done

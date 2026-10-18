@@ -1,8 +1,4 @@
-    #=============================================================================
-    # painworld — src/screens/end.s
-    # End-of-round screen: the frozen fight (so you see the spear land) with
-    # the winner and the score on top. Enter starts the next round (inputs.s).
-    #=============================================================================
+# end.s - end of round: the frozen fight with the winner + score on top
 
     .include "constants.inc"
 
@@ -14,19 +10,16 @@ end_draw:  .asciz "  DRAW: both drowned  "
 end_kills: .asciz " kills  P1: %ld   P2: %ld "
 end_help:  .asciz " Enter: next round   x: quit "
 
-    #-----------------------------------------------------------------------------
-    # void draw_end(void)
-    #-----------------------------------------------------------------------------
 draw_end:
     # prologue
     pushq %rbp
     movq  %rsp, %rbp
 
-    call draw_world             # the world, frozen (no update_physics)
+    call draw_world             # no update_physics here, so it's frozen
     call draw_rain
     call draw_spears
 
-    cmpq $0, winner             # winner -1 = nobody (both drowned)
+    cmpq $0, winner             # -1 = draw
     jl   .end_draw
 
     # mvprintw(15, 51, end_title, winner + 1)
@@ -34,7 +27,7 @@ draw_end:
     movq $51, %rsi
     movq $end_title, %rdx
     movq winner, %rcx
-    incq %rcx                   # player 0 -> "P1"
+    incq %rcx                   # player 0 is "P1"
     movq $0, %rax
     call mvprintw
     jmp  .end_score

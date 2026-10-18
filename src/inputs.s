@@ -1,72 +1,48 @@
-    #=============================================================================
-    # painworld — src/inputs.s
-    # Input handling. Reads ncurses getch() and translates keys into player
-    # actions / game-state changes.
-    #
-    # Terminals only tell us "a key was typed", never "a key was released".
-    # So a move key starts a countdown (move_timer = KEY_HOLD): the slugcat keeps
-    # running while it is > 0, and the keyboard's auto-repeat keeps refilling it
-    # while the key is held down.
-    #
-    # Key map:
-    #   P1: a / d  run      w  jump     s  stop     q  grab / throw spear
-    #   P2: arrows run      UP jump     DOWN stop   .  grab / throw spear
-    #   Enter      menu: start | end screen: next round | guide/credits: back
-    #   g / c      menu: guide / credits
-    #   x / Esc    quit
-    #=============================================================================
+# inputs.s - keys -> player actions and scene changes
+#
+# terminals only say "a key was typed", never "released". so a move key sets
+# move_timer = KEY_HOLD and you keep running while it's > 0. holding the key
+# auto-repeats, which keeps refilling it.
+#
+#   P1: a/d run, w jump, s stop, q spear      P2: arrows, . spear
+#   Enter: start / next round / back      g, c: guide, credits      x, Esc: quit
 
     .include "constants.inc"
 
     .text
     .globl poll_input
 
-    #-----------------------------------------------------------------------------
-    # void poll_input(void)
-    #
-    # Reads keys until getch() returns -1 (no more keys waiting), so several
-    # key presses in one frame are all handled.
-    # The player a key belongs to goes in %rcx (0 = P1, 1 = P2), so the same
-    # code handles both players.
-    #-----------------------------------------------------------------------------
+# void poll_input(void)
+# reads keys until getch says there are none left (-1).
+# %rcx = which player the key belongs to, so both players share the same code.
 poll_input:
     # prologue
     pushq %rbp
     movq  %rsp, %rbp
 
     # callee-conventions
-    pushq %rbx                  # rbx will hold the current key
-    subq  $8, %rsp              # keep the stack 16-byte aligned for getch
+    pushq %rbx                  # rbx = current key
+    subq  $8, %rsp              # stack aligned to 16 for getch
 
 .read_key:
-    call getch                  # eax = key code, or -1 if no key waiting
+    call getch                  # eax = key, -1 = nothing
     cmpl $-1, %eax
     je   .no_more_keys
-    movl %eax, %ebx             # rbx = key code
-    movq %rbx, last_key         # remember it for the HUD
+    movl %eax, %ebx
 
-    # quit
     cmpq $'x', %rbx
     je   .quit
     cmpq $KEY_ESC, %rbx
     je   .quit
-
-    # next round
-    cmpq $KEY_NEWLINE, %rbx
+    cmpq $KEY_NEWLINE, %rbx     # Enter
     je   .enter
-    cmpq $KEY_RETURN, %rbx
-    je   .enter
-    cmpq $KEY_ENTER, %rbx
-    je   .enter
-
-    # menu
     cmpq $'g', %rbx
     je   .guide
     cmpq $'c', %rbx
     je   .credits
 
-    # P1 (WASD)
-    movq $0, %rcx               # player 0
+    # P1
+    movq $0, %rcx
     cmpq $'a', %rbx
     je   .move_left
     cmpq $'d', %rbx
@@ -78,8 +54,8 @@ poll_input:
     cmpq $'q', %rbx
     je   .grab
 
-    # P2 (arrow keys)
-    movq $1, %rcx               # player 1
+    # P2
+    movq $1, %rcx
     cmpq $KEY_LEFT, %rbx
     je   .move_left
     cmpq $KEY_RIGHT, %rbx
@@ -91,63 +67,58 @@ poll_input:
     cmpq $'.', %rbx
     je   .grab
 
-    jmp  .read_key              # some other key: ignore it
+    jmp  .read_key              # some other key, ignore
 
 .move_left:
-    movq $-1, move_dir(,%rcx,8)         # move_dir[p] = -1
-    movq $KEY_HOLD, move_timer(,%rcx,8) # move_timer[p] = KEY_HOLD
+    movq $-1, move_dir(,%rcx,8)
+    movq $KEY_HOLD, move_timer(,%rcx,8)
     jmp  .read_key
 
 .move_right:
-    movq $1, move_dir(,%rcx,8)          # move_dir[p] = 1
-    movq $KEY_HOLD, move_timer(,%rcx,8) # move_timer[p] = KEY_HOLD
+    movq $1, move_dir(,%rcx,8)
+    movq $KEY_HOLD, move_timer(,%rcx,8)
     jmp  .read_key
 
 .jump:
-    movq $1, jump_req(,%rcx,8)          # jump_req[p] = 1
-    # While you hold d and tap w, the terminal stops repeating d.
-    # So a jump while running refills the run timer.
+    movq $1, jump_req(,%rcx,8)
+    # tapping w while holding d stops d from repeating,
+    # so a jump while running refills the run timer
     cmpq $0, move_timer(,%rcx,8)
     jle  .read_key
     movq $KEY_HOLD, move_timer(,%rcx,8)
     jmp  .read_key
 
 .stop:
-    movq $0, move_timer(,%rcx,8)        # move_timer[p] = 0
+    movq $0, move_timer(,%rcx,8)
     jmp  .read_key
 
 .grab:
-    movq $1, grab_req(,%rcx,8)          # grab_req[p] = 1 (physics handles it)
+    movq $1, grab_req(,%rcx,8)  # physics does the actual grab/throw
     jmp  .read_key
 
 .enter:
-    cmpq $SCENE_HOME, game_state        # menu: start a round
+    cmpq $SCENE_HOME, game_state
     je   .start_round
-    cmpq $SCENE_END, game_state         # end screen: next round
+    cmpq $SCENE_END, game_state
     je   .start_round
-    cmpq $SCENE_GUIDE, game_state       # guide / credits: back to the menu
-    je   .to_home
-    cmpq $SCENE_CREDITS, game_state
-    je   .to_home
-    jmp  .read_key                      # in the game: Enter does nothing
+    cmpq $SCENE_GAME, game_state
+    je   .read_key              # does nothing mid-fight
+    movq $SCENE_HOME, game_state # guide / credits -> back to menu
+    jmp  .read_key
 
 .start_round:
-    call reset_round                    # see fights.s
+    call reset_round
     movq $SCENE_GAME, game_state
     jmp  .read_key
 
-.to_home:
-    movq $SCENE_HOME, game_state
-    jmp  .read_key
-
 .guide:
-    cmpq $SCENE_HOME, game_state        # only from the menu
+    cmpq $SCENE_HOME, game_state # only from the menu
     jne  .read_key
     movq $SCENE_GUIDE, game_state
     jmp  .read_key
 
 .credits:
-    cmpq $SCENE_HOME, game_state        # only from the menu
+    cmpq $SCENE_HOME, game_state
     jne  .read_key
     movq $SCENE_CREDITS, game_state
     jmp  .read_key

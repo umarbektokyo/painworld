@@ -1,13 +1,10 @@
-    #=============================================================================
-    # painworld — src/spears.s
-    # Spears: spawn on platforms, pick up, throw, fly, stick, kill.
-    #
-    # Every spear is in one of three states (spear_state):
-    #   SPEAR_STUCK   standing upright in a platform; walk over it and grab it
-    #   SPEAR_HELD    carried at the owner's head, pointing where they face
-    #   SPEAR_FLYING  thrown: flies sideways in a shallow arc until it hits a
-    #                 platform (-> STUCK) or the other slugcat (-> round over)
-    #=============================================================================
+# spears.s - spawn, pick up, throw, fly, stick, kill
+#
+# a spear is always in one of 3 states:
+#   STUCK   upright in a platform, walk onto it to grab it
+#   HELD    follows the owner's head, points where they face
+#   FLYING  thrown, flies in a flat arc until it hits a platform (-> STUCK)
+#           or the other slugcat (-> round over)
 
     .include "constants.inc"
 
@@ -17,44 +14,36 @@
     .globl update_spears
     .globl draw_spears
 
-    #-----------------------------------------------------------------------------
-    # void spawn_spears(void)
-    #
-    #   for each spear s:
-    #       j = rand() % NUM_PLATS                          (random platform)
-    #       x = plat_x0[j] + 16 + rand() % (width - 32)     (random spot on it)
-    #       y = plat_y0[j];  state = STUCK
-    #-----------------------------------------------------------------------------
+# void spawn_spears(void)
+# each spear goes to a random platform at a random x (16 away from the edges)
 spawn_spears:
     # prologue
     pushq %rbp
     movq  %rsp, %rbp
 
     # callee-conventions
-    pushq %rbx                  # rbx = spear index s
-    pushq %r12                  # r12 = platform index j
+    pushq %rbx                  # spear
+    pushq %r12                  # platform
 
     movq $0, %rbx
 .ss_loop:
     cmpq $NUM_SPEARS, %rbx
     jge  .ss_done
 
-    # j = rand() % NUM_PLATS
-    call rand                   # eax = random number
-    movl %eax, %eax             # clear the top half of rax (rand returns int)
-    movq $0, %rdx               # divq divides rdx:rax, so rdx must be 0
+    call rand                   # platform = rand() % NUM_PLATS
+    movl %eax, %eax             # rand gives an int, clear the top half
+    movq $0, %rdx               # divq divides rdx:rax
     movq $NUM_PLATS, %rcx
-    divq %rcx                   # rdx = rax % NUM_PLATS
+    divq %rcx                   # remainder in rdx
     movq %rdx, %r12
 
-    # x = plat_x0[j] + 16 + rand() % (plat_x1[j] - plat_x0[j] - 32)
-    call rand
+    call rand                   # x = x0 + 16 + rand() % (width - 32)
     movl %eax, %eax
     movq plat_x1(,%r12,8), %rcx
     subq plat_x0(,%r12,8), %rcx
-    subq $32, %rcx              # keep 16 subunits away from both edges
+    subq $32, %rcx
     movq $0, %rdx
-    divq %rcx                   # rdx = rand % (width - 32)
+    divq %rcx
     addq plat_x0(,%r12,8), %rdx
     addq $16, %rdx
     movq %rdx, spear_x(,%rbx,8)
@@ -76,24 +65,14 @@ spawn_spears:
     popq %rbp
     ret
 
-    #-----------------------------------------------------------------------------
-    # void grab_or_throw(long p /* %rdi */)
-    #
-    #   if held_spear[p] >= 0:                         (holding one -> throw)
-    #       s = held_spear[p];  state[s] = FLYING
-    #       vx = move_dir[p] * SPEAR_SPEED;  vy = -SPEAR_LIFT
-    #       held_spear[p] = -1
-    #   else:                                          (empty hands -> grab)
-    #       for each spear s that is STUCK:
-    #           if |spear_x - body.x| < GRAB_RANGE_X && |spear_y - body.y| < GRAB_RANGE_Y:
-    #               state[s] = HELD;  owner[s] = p;  held_spear[p] = s;  return
-    #-----------------------------------------------------------------------------
+# void grab_or_throw(long p /* %rdi */)
+# holding one -> throw it. empty hands -> grab a STUCK spear close to our body.
 grab_or_throw:
     # prologue
     pushq %rbp
     movq  %rsp, %rbp
 
-    movq held_spear(,%rdi,8), %rcx  # rcx = spear we hold (or -1)
+    movq held_spear(,%rdi,8), %rcx
     cmpq $0, %rcx
     jl   .gt_find
 
@@ -101,18 +80,18 @@ grab_or_throw:
     movq $SPEAR_FLYING, spear_state(,%rcx,8)
     movq move_dir(,%rdi,8), %rax
     movq %rax, spear_dir(,%rcx,8)
-    imulq $SPEAR_SPEED, %rax    # vx = move_dir * SPEAR_SPEED
+    imulq $SPEAR_SPEED, %rax    # vx = dir * SPEAR_SPEED
     movq %rax, spear_vx(,%rcx,8)
-    movq $-SPEAR_LIFT, spear_vy(,%rcx,8)
+    movq $-SPEAR_LIFT, spear_vy(,%rcx,8) # a bit upwards
     movq $-1, held_spear(,%rdi,8)
     jmp  .gt_done
 
 .gt_find:
     movq %rdi, %r8
     shlq $1, %r8
-    incq %r8                    # r8 = body chunk = p * 2 + 1
+    incq %r8                    # body chunk = p * 2 + 1
 
-    movq $0, %rcx               # rcx = spear index
+    movq $0, %rcx
 .gt_loop:
     cmpq $NUM_SPEARS, %rcx
     jge  .gt_done
@@ -120,7 +99,7 @@ grab_or_throw:
     cmpq $SPEAR_STUCK, spear_state(,%rcx,8)
     jne  .gt_next
 
-    movq spear_x(,%rcx,8), %rax # rax = |spear_x - body.x|
+    movq spear_x(,%rcx,8), %rax # |spear x - body x| < GRAB_RANGE_X
     subq chunk_x(,%r8,8), %rax
     cmpq $0, %rax
     jge  .gt_abs_x
@@ -129,7 +108,7 @@ grab_or_throw:
     cmpq $GRAB_RANGE_X, %rax
     jge  .gt_next
 
-    movq spear_y(,%rcx,8), %rax # rax = |spear_y - body.y|
+    movq spear_y(,%rcx,8), %rax # |spear y - body y| < GRAB_RANGE_Y
     subq chunk_y(,%r8,8), %rax
     cmpq $0, %rax
     jge  .gt_abs_y
@@ -138,8 +117,7 @@ grab_or_throw:
     cmpq $GRAB_RANGE_Y, %rax
     jge  .gt_next
 
-    # close enough: pick it up
-    movq $SPEAR_HELD, spear_state(,%rcx,8)
+    movq $SPEAR_HELD, spear_state(,%rcx,8) # close enough, pick it up
     movq %rdi, spear_owner(,%rcx,8)
     movq %rcx, held_spear(,%rdi,8)
     jmp  .gt_done
@@ -154,26 +132,17 @@ grab_or_throw:
     popq %rbp
     ret
 
-    #-----------------------------------------------------------------------------
-    # void update_spears(void)
-    #
-    #   for each spear s:
-    #     HELD:   x, y = owner's head;  dir = move_dir[owner]
-    #     FLYING: vy = min(vy + SPEAR_GRAVITY, SPEAR_MAX_FALL)
-    #             x += vx;  y += vy
-    #             hit the left / right edge -> stop moving sideways, drop down
-    #             falling into a platform   -> y = top;  state = STUCK
-    #             inside a chunk of the other player ->
-    #                 winner = owner;  kills[owner]++;  game_state = SCENE_END
-    #-----------------------------------------------------------------------------
+# void update_spears(void)
+#   HELD:   copy the owner's head position + facing
+#   FLYING: gravity, move, edges, stick into platforms, hit the other player
 update_spears:
     # prologue
     pushq %rbp
     movq  %rsp, %rbp
 
     # callee-conventions
-    pushq %rbx                  # rbx = spear index s
-    subq  $8, %rsp              # keep the stack 16-byte aligned
+    pushq %rbx                  # spear
+    subq  $8, %rsp              # stack aligned
 
     movq $0, %rbx
 .us_loop:
@@ -184,41 +153,32 @@ update_spears:
     je   .us_held
     cmpq $SPEAR_FLYING, spear_state(,%rbx,8)
     je   .us_flying
-    jmp  .us_next               # STUCK: nothing to do
+    jmp  .us_next               # stuck, nothing to do
 
-    #-----------------------------------------------------------------------------
-    # held: follow the owner's head
-    #-----------------------------------------------------------------------------
 .us_held:
     movq spear_owner(,%rbx,8), %rax
     movq move_dir(,%rax,8), %rcx
-    movq %rcx, spear_dir(,%rbx,8)   # point where the owner faces
-    shlq $1, %rax                   # rax = owner's head chunk
+    movq %rcx, spear_dir(,%rbx,8)
+    shlq $1, %rax               # owner's head chunk
     movq chunk_x(,%rax,8), %rcx
     movq %rcx, spear_x(,%rbx,8)
     movq chunk_y(,%rax,8), %rcx
     movq %rcx, spear_y(,%rbx,8)
     jmp  .us_next
 
-    #-----------------------------------------------------------------------------
-    # flying
-    #-----------------------------------------------------------------------------
 .us_flying:
-    # gravity, capped
     addq $SPEAR_GRAVITY, spear_vy(,%rbx,8)
     cmpq $SPEAR_MAX_FALL, spear_vy(,%rbx,8)
     jle  .us_no_cap
     movq $SPEAR_MAX_FALL, spear_vy(,%rbx,8)
 .us_no_cap:
 
-    # x += vx;  y += vy
     movq spear_vx(,%rbx,8), %rax
     addq %rax, spear_x(,%rbx,8)
     movq spear_vy(,%rbx,8), %rax
     addq %rax, spear_y(,%rbx,8)
 
-    # left / right edge: stop sideways movement, it just drops
-    cmpq $0, spear_x(,%rbx,8)
+    cmpq $0, spear_x(,%rbx,8)   # hit a side: stop going sideways, just drop
     jge  .us_right
     movq $0, spear_x(,%rbx,8)
     movq $0, spear_vx(,%rbx,8)
@@ -229,64 +189,46 @@ update_spears:
     movq $0, spear_vx(,%rbx,8)
 .us_edges_done:
 
-    movq spear_x(,%rbx,8), %rdi # rdi, rsi = the spear's point
+    movq spear_x(,%rbx,8), %rdi
     movq spear_y(,%rbx,8), %rsi
 
-    # platforms (only while falling, like the slugcats)
-    cmpq $0, spear_vy(,%rbx,8)
+    cmpq $0, spear_vy(,%rbx,8)  # only sticks while falling, like the slugcats
     jl   .us_players
-    movq $0, %rcx               # rcx = platform index
-.us_plat_loop:
-    cmpq $NUM_PLATS, %rcx
-    jge  .us_players
+    call find_platform          # render.s, rax = platform or -1
+    cmpq $0, %rax
+    jl   .us_players
 
-    cmpq plat_x0(,%rcx,8), %rdi
-    jl   .us_next_plat
-    cmpq plat_x1(,%rcx,8), %rdi
-    jge  .us_next_plat
-    cmpq plat_y0(,%rcx,8), %rsi
-    jl   .us_next_plat
-    cmpq plat_y1(,%rcx,8), %rsi
-    jge  .us_next_plat
-
-    # stick into the platform
-    movq plat_y0(,%rcx,8), %rax
-    movq %rax, spear_y(,%rbx,8)
+    movq plat_y0(,%rax,8), %rcx # stick in: y = platform top
+    movq %rcx, spear_y(,%rbx,8)
     movq $0, spear_vx(,%rbx,8)
     movq $0, spear_vy(,%rbx,8)
     movq $SPEAR_STUCK, spear_state(,%rbx,8)
     jmp  .us_next
 
-.us_next_plat:
-    incq %rcx
-    jmp  .us_plat_loop
-
-    # slugcats (same circle test as sample_point in render.s)
 .us_players:
-    movq $0, %rcx               # rcx = chunk index
+    movq $0, %rcx               # chunk
 .us_hit_loop:
     cmpq $NUM_CHUNKS, %rcx
     jge  .us_next
 
     movq %rcx, %rax
-    shrq $1, %rax               # rax = player of this chunk
+    shrq $1, %rax               # player of this chunk
     cmpq spear_owner(,%rbx,8), %rax
     je   .us_next_chunk         # can't hit yourself
 
-    movq %rdi, %r8
+    movq %rdi, %r8              # inside the circle? d2 < r2
     subq chunk_x(,%rcx,8), %r8
-    imulq %r8, %r8              # r8 = dx * dx
+    imulq %r8, %r8
     movq %rsi, %r9
     subq chunk_y(,%rcx,8), %r9
-    imulq %r9, %r9              # r9 = dy * dy
-    addq %r9, %r8               # r8 = d2
+    imulq %r9, %r9
+    addq %r9, %r8
     movq chunk_r(,%rcx,8), %r10
-    imulq %r10, %r10            # r10 = r2
+    imulq %r10, %r10
     cmpq %r10, %r8
-    jge  .us_next_chunk         # missed this chunk
+    jge  .us_next_chunk
 
-    # hit! the thrower wins the round
-    movq spear_owner(,%rbx,8), %rax
+    movq spear_owner(,%rbx,8), %rax # hit! thrower wins the round
     movq %rax, winner
     incq kills(,%rax,8)
     movq $SCENE_END, game_state
@@ -308,24 +250,20 @@ update_spears:
     popq %rbp
     ret
 
-    #-----------------------------------------------------------------------------
-    # void draw_spears(void)
-    #
-    # Drawn on top of the world as plain characters (row = y / 32, col = x / 16):
-    #   STUCK:          3 '|' straight up from the platform
-    #   HELD / FLYING:  "---->" (or "<----") centred on the spear
-    # mvaddch ignores anything outside the screen, so no bounds checks needed.
-    #-----------------------------------------------------------------------------
+# void draw_spears(void)
+# plain chars on top of the world (row = y / 32, col = x / 16):
+#   STUCK -> 3 '|' going up,  HELD / FLYING -> "---->" or "<----"
+# mvaddch just ignores stuff off screen, so no bounds checks
 draw_spears:
     # prologue
     pushq %rbp
     movq  %rsp, %rbp
 
     # callee-conventions
-    pushq %rbx                  # rbx = spear index s
-    pushq %r12                  # r12 = row
-    pushq %r13                  # r13 = col
-    pushq %r14                  # r14 = loop counter k
+    pushq %rbx                  # spear
+    pushq %r12                  # row
+    pushq %r13                  # col
+    pushq %r14                  # k
 
     movq $0, %rbx
 .ds_loop:
@@ -333,35 +271,33 @@ draw_spears:
     jge  .ds_done
 
     movq spear_y(,%rbx,8), %r12
-    shrq $5, %r12               # row = y / 32
+    shrq $5, %r12               # / 32
     movq spear_x(,%rbx,8), %r13
-    shrq $4, %r13               # col = x / 16
+    shrq $4, %r13               # / 16
 
     cmpq $SPEAR_STUCK, spear_state(,%rbx,8)
     jne  .ds_flat
 
-    # upright: '|' on the 3 rows above the platform
-    movq $1, %r14               # k = 1
+    movq $1, %r14               # '|' on the 3 rows above
 .ds_up_loop:
     cmpq $3, %r14
     jg   .ds_next
     movq %r12, %rdi
-    subq %r14, %rdi             # row - k
+    subq %r14, %rdi
     movq %r13, %rsi
     movq $'|', %rdx
     call mvaddch
     incq %r14
     jmp  .ds_up_loop
 
-    # flat: '-' from col - 2 to col + 2, then the tip on the front end
 .ds_flat:
-    movq $-2, %r14              # k = -2
+    movq $-2, %r14              # '-' from col - 2 to col + 2
 .ds_flat_loop:
     cmpq $2, %r14
     jg   .ds_tip
     movq %r12, %rdi
     movq %r13, %rsi
-    addq %r14, %rsi             # col + k
+    addq %r14, %rsi
     movq $'-', %rdx
     call mvaddch
     incq %r14
@@ -371,15 +307,15 @@ draw_spears:
     movq %r12, %rdi
     cmpq $1, spear_dir(,%rbx,8)
     jne  .ds_tip_left
-    movq %r13, %rsi
+    movq %r13, %rsi             # '>' at col + 2
     addq $2, %rsi
-    movq $'>', %rdx             # pointing right: tip at col + 2
+    movq $'>', %rdx
     call mvaddch
     jmp  .ds_next
 .ds_tip_left:
-    movq %r13, %rsi
+    movq %r13, %rsi             # '<' at col - 2
     subq $2, %rsi
-    movq $'<', %rdx             # pointing left: tip at col - 2
+    movq $'<', %rdx
     call mvaddch
 
 .ds_next:

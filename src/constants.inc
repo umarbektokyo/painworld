@@ -1,17 +1,8 @@
-#=============================================================================
-# painworld — src/constants.inc
-# Shared constants. Every .s file that needs them does:
-#     .include "constants.inc"
+# constants.inc - shared .equ values, included by every .s file
 #
-# UNITS
-#   All positions and speeds are stored in "subunits": 16 subunits = 1 world
-#   unit = the width of one text cell. A text cell is about twice as tall as it
-#   is wide, so one cell is 16 subunits wide and 32 subunits tall.
-#   The world is 120 cells x 36 cells = 1920 x 1152 subunits. y points DOWN.
-#
-#   Working in subunits lets things move by less than one cell per frame
-#   without floats: speed 4 = a quarter of a cell per frame.
-#=============================================================================
+# positions/speeds are in subunits: a cell is 16 wide and 32 tall
+# (cells are ~2x taller than wide). so the 120x36 world is 1920x1152, y goes down.
+# this way things can move less than a cell per frame without floats.
 
 # ---- screen -----------------------------------------------------------------
 .equ COLS,        120           # terminal width  (cells)
@@ -93,8 +84,6 @@
 # ---- colours (xterm 256-colour palette numbers) -----------------------------
 .equ P1_COLOR,    150           # #afd787 green  (closest to 195, 232, 141)
 .equ P2_COLOR,    209           # #ff875f orange (closest to 255, 150, 108)
-.equ P1_COLOR_8,  2             # fallback for 8-colour terminals: green
-.equ P2_COLOR_8,  1             #                                  red
 
 # ---- sky shader (sky.s) ------------------------------------------------------
 .equ SKY_BIAS_ROW, 8            # rows above this get extra clouds
@@ -102,16 +91,13 @@
 .equ SKY_THICK,    20           # v above this: thick cloud ':'
 .equ SKY_PAIR,     4            # colour pair of the clouds
 .equ SKY_COLOR,    60           # #5f5f87 slate blue-grey
-.equ SKY_COLOR_8,  4            # 8-colour fallback: blue
 
 # ---- misc -------------------------------------------------------------------
 .equ LC_ALL,      6             # from <locale.h> (glibc)
 
 # ---- key codes (from <ncurses.h>) -----------------------------------------
 .equ KEY_ESC,     27
-.equ KEY_NEWLINE, 10
-.equ KEY_RETURN,  13
-.equ KEY_ENTER,   343           # Enter on the number pad
+.equ KEY_NEWLINE, 10            # Enter (ncurses turns \r into \n)
 .equ KEY_DOWN,    258
 .equ KEY_UP,      259
 .equ KEY_LEFT,    260

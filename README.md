@@ -16,7 +16,7 @@ It's like rain world but was made using assembly, thus in pain.
 Start Date: October 14th
 Deadline: October 20th
 Language: x86-64 assembly, AT&T Syntax. Linked with libc + ncursesw (no floats, everything is integer math).
-Terminal: at least 120 x 36 characters, 256 colours (falls back to 8 colours).
+Terminal: at least 120 x 36 characters, 256 colours.
 
 ## The Game
 Two slugcats, one keyboard, one static multi-floor map.
@@ -59,21 +59,24 @@ Positions and speeds are stored in subunits: 16 subunits = 1 cell wide, and a ce
 read all pending keys → update physics (move, spine, collisions, spears, rain, drowning) → draw the current scene → `refresh()` → `usleep(33000)`.
 
 ## Project Structure
+Team docs (overview + one deep-dive per area) are in [docs/](docs/OVERVIEW.md).
 ```
 .
 ├── Dockerfile / docker-compose.yml   # linux/amd64 dev container
 ├── Makefile                          # builds src/**/*.s into build/, links ncursesw
+├── docs/                             # team overview + deep-dive guides
 └── src
     ├── constants.inc                 # every .equ (sizes, physics, keys)
     ├── data.s                        # all game state (arrays of 8-byte values)
     ├── main.s                        # ncurses setup, main loop, scene dispatch
     ├── inputs.s                      # keys -> player actions / scene changes
-    ├── render.s                      # brightness sampler (draw_world, sample_point)
+    ├── physics.s                     # movement, spine, collisions, round reset
+    ├── render.s                      # brightness sampler + find_platform
     ├── spears.s                      # spawn, grab/throw, flight, hits, drawing
     ├── rain.s                        # drops, splashes, flood, drowning
     ├── sky.s                         # sky shader (drifting clouds)
     └── screens
-        ├── fights.s                  # physics step, spine, collisions, round reset, HUD
+        ├── fights.s                  # draws the fight + score
         ├── end.s                     # end-of-round screen
         ├── home.s / guide.s / credits.s
         └── text.s                    # draw_lines helper for the menu screens
