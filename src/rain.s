@@ -51,6 +51,15 @@ reset_rain:
     jmp  .rr_col_loop
 .rr_cols_done:
 
+    movq $0, %rcx               # rcx = platform
+.rr_plat_loop:
+    cmpq $NUM_PLATS, %rcx
+    jge  .rr_plats_done
+    movq $0, plat_wet(,%rcx,8)
+    incq %rcx
+    jmp  .rr_plat_loop
+.rr_plats_done:
+
     movq $0, water_total
     movq $0, water_level
     movq $RAIN_START, rain_level
@@ -117,9 +126,10 @@ spawn_drop:
     #              drop stops
     #              if water_total > 0 or splash[c] > 0: water_total += DROP_WATER
     #              else:                                splash[c] = SPLASH_FRAMES
-    #          else if inside a platform (not the floor):
+    #          else if inside a platform j (not the floor):
+    #              plat_wet[j] = min(plat_wet[j] + WET_PER_DROP, WET_MAX)
     #              move it to the platform's nearer edge (it drips off there)
-    #   4. every splash[c] counts down by 1
+    #   4. every splash[c] and plat_wet[j] counts down by 1
     #   5. water_level = water_total / COLS
     #-----------------------------------------------------------------------------
 update_rain:
@@ -224,8 +234,15 @@ update_rain:
     cmpq plat_y1(,%rcx,8), %rsi
     jge  .ur_plat_next
 
-    # hit a platform: the water runs off to the nearer edge and drips from
-    # there, so it still ends up in the lake
+    # hit a platform: its top gets wetter (drawn in render.s)
+    addq $WET_PER_DROP, plat_wet(,%rcx,8)
+    cmpq $WET_MAX, plat_wet(,%rcx,8)
+    jle  .ur_wet_ok
+    movq $WET_MAX, plat_wet(,%rcx,8)
+.ur_wet_ok:
+
+    # the water runs off to the nearer edge and drips from there,
+    # so it still ends up in the lake
     movq plat_x0(,%rcx,8), %rax
     addq plat_x1(,%rcx,8), %rax
     shrq $1, %rax               # rax = middle of the platform
@@ -249,19 +266,31 @@ update_rain:
     jmp  .ur_move_loop
 
     #-----------------------------------------------------------------------------
-    # 4. splashes dry up
+    # 4. splashes and platforms dry up
     #-----------------------------------------------------------------------------
 .ur_splash:
     movq $0, %rcx               # rcx = column
 .ur_splash_loop:
     cmpq $COLS, %rcx
-    jge  .ur_level
+    jge  .ur_drain
     cmpq $0, splash(,%rcx,8)
     jle  .ur_splash_next
     decq splash(,%rcx,8)
 .ur_splash_next:
     incq %rcx
     jmp  .ur_splash_loop
+
+.ur_drain:
+    movq $0, %rcx               # rcx = platform
+.ur_drain_loop:
+    cmpq $NUM_PLATS, %rcx
+    jge  .ur_level
+    cmpq $0, plat_wet(,%rcx,8)
+    jle  .ur_drain_next
+    decq plat_wet(,%rcx,8)      # platforms slowly dry up
+.ur_drain_next:
+    incq %rcx
+    jmp  .ur_drain_loop
 
     #-----------------------------------------------------------------------------
     # 5. flat lake: water_level = water_total / COLS

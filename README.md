@@ -16,17 +16,17 @@ It's like rain world but was made using assembly, thus in pain.
 Start Date: October 14th
 Deadline: October 20th
 Language: x86-64 assembly, AT&T Syntax. Linked with libc + ncursesw (no floats, everything is integer math).
-Terminal: at least 120 x 36 characters.
+Terminal: at least 120 x 36 characters, 256 colours (falls back to 8 colours).
 
 ## The Game
 Two slugcats, one keyboard, one static multi-floor map.
 - **Move**: run left/right and jump. Platforms can be jumped through from below and landed on from above.
 - **Spears**: spears spawn at random spots on the platforms. Walk onto one and press your spear key to pick it up, press it again to throw it the way you are facing. It flies in a shallow arc and sticks into whatever platform it lands on, so it can be picked up again. A hit kills.
-- **Rain**: it starts as a light drizzle and gets heavier every second. A drop that lands on dry floor disappears after a second, but rain landing on rain stays. Puddles turn into a lake that keeps rising. Rain hitting a platform drips off its edges. If your head goes under water, you drown.
+- **Rain**: it starts as a light drizzle and gets heavier every second. A drop that lands on dry floor disappears after a second, but rain landing on rain stays. Puddles turn into a lake that keeps rising. Rain hitting a platform leaves a thin layer of water on top (it gets thicker the harder it rains) and drips off its edges. If your head goes under water, you drown.
 - **Rounds**: spear the other slugcat (or let them drown) to win the round. Both drowning at once is a draw. The kill count carries over between rounds.
 
 ### Controls
-| | P1 (yellow) | P2 (red) |
+| | P1 (green) | P2 (orange) |
 |---|---|---|
 | run | `a` / `d` | `←` / `→` |
 | jump | `w` | `↑` |

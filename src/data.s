@@ -16,7 +16,7 @@
     .globl move_dir, move_timer, jump_req, grab_req, on_ground, held_spear
     .globl spear_x, spear_y, spear_vx, spear_vy, spear_state, spear_owner
     .globl spear_dir
-    .globl drop_x, drop_y, drop_active, water_total, water_level, splash
+    .globl drop_x, drop_y, drop_active, water_total, water_level, splash, plat_wet
     .globl rain_level, rain_clock, drowned
     .globl plat_x0, plat_y0, plat_x1, plat_y1
     .globl game_state, quit_flag, last_key, kills, winner
@@ -71,6 +71,7 @@ drop_active: .skip MAX_DROPS * 8    # 1 = this drop is falling
 water_total: .quad 0                # all the water that stayed, added up
 water_level: .quad 0                # water_total / COLS: height above the floor
 splash:      .skip COLS * 8         # frames left of a splash, per column
+plat_wet:    .skip NUM_PLATS * 8    # how wet each platform's top is
 rain_level:  .quad RAIN_START       # spawn chance (per mille), grows over time
 rain_clock:  .quad 0                # frames since rain_level last grew
 drowned:     .quad 0, 0             # per player: 1 = head is under water

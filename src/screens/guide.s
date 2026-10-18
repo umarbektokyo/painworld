@@ -17,7 +17,7 @@ guide_title:  .quad guide_title_0, guide_title_1, guide_title_2, guide_title_3, 
 
 guide_text_0: .asciz "GOAL    Spear the other slugcat before the flood drowns you both."
 guide_text_1: .asciz ""
-guide_text_2: .asciz "        P1 (yellow)          P2 (red)"
+guide_text_2: .asciz "        P1 (green)           P2 (orange)"
 guide_text_3: .asciz "run     a / d                left / right"
 guide_text_4: .asciz "jump    w                    up"
 guide_text_5: .asciz "stop    s                    down"

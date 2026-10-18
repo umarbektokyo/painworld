@@ -74,6 +74,9 @@
 .equ DROP_WATER,    8           # water one drop adds to water_total
 .equ FLOOR_TOP,     1088        # top of the floor (plat_y0[0])
 .equ SPLASH_ROW,    33          # the text row just above the floor
+.equ WET_PER_DROP,  4           # a drop hitting a platform makes it wetter...
+.equ WET_MAX,       128         # ...up to this; it drains 1 per frame
+                                # water film on top = plat_wet / 8 (max 16)
 .equ WATER_SHADE,   3           # brightness of water (0..9)
 .equ WATER_PAIR,    3           # colour pair of water (blue)
 
@@ -83,6 +86,12 @@
 .equ SCENE_END,     2
 .equ SCENE_GUIDE,   3
 .equ SCENE_CREDITS, 4
+
+# ---- colours (xterm 256-colour palette numbers) -----------------------------
+.equ P1_COLOR,    150           # #afd787 green  (closest to 195, 232, 141)
+.equ P2_COLOR,    209           # #ff875f orange (closest to 255, 150, 108)
+.equ P1_COLOR_8,  2             # fallback for 8-colour terminals: green
+.equ P2_COLOR_8,  1             #                                  red
 
 # ---- misc -------------------------------------------------------------------
 .equ LC_ALL,      6             # from <locale.h> (glibc)

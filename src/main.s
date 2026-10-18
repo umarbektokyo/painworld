@@ -60,15 +60,34 @@ main:
 
     call start_color            # enable colours
 
-    movq $1, %rdi               # init_pair(1, YELLOW, BLACK): P1's colour
-    movq $3, %rsi
+    # Player colours: the nice ones need a 256-colour terminal.
+    # COLORS is a global int from ncurses (set by start_color).
+    cmpl $256, COLORS
+    jl   .basic_colours
+
+    movq $1, %rdi               # init_pair(1, P1_COLOR, BLACK): P1 green
+    movq $P1_COLOR, %rsi
     movq $0, %rdx
     call init_pair
 
-    movq $2, %rdi               # init_pair(2, RED, BLACK): P2's colour
-    movq $1, %rsi
+    movq $2, %rdi               # init_pair(2, P2_COLOR, BLACK): P2 orange
+    movq $P2_COLOR, %rsi
     movq $0, %rdx
     call init_pair
+    jmp  .colours_done
+
+.basic_colours:
+    movq $1, %rdi               # init_pair(1, GREEN, BLACK)
+    movq $P1_COLOR_8, %rsi
+    movq $0, %rdx
+    call init_pair
+
+    movq $2, %rdi               # init_pair(2, RED, BLACK)
+    movq $P2_COLOR_8, %rsi
+    movq $0, %rdx
+    call init_pair
+
+.colours_done:
 
     movq $3, %rdi               # init_pair(3, BLUE, BLACK): rain + water
     movq $4, %rsi

@@ -128,6 +128,9 @@ draw_world:
     # How bright is the world at point (x, y)? Returns 0..9.
     #   b = 0
     #   for each platform j: if (x, y) is inside it: b = TERRAIN_SHADE
+    #   for each platform j except the floor:          (wet film on top)
+    #       if x0 <= x < x1 and y0 - plat_wet[j] / 8 <= y < y0 and b < WATER_SHADE:
+    #           b = WATER_SHADE;  cell_owner = WATER_PAIR (unless a slugcat has it)
     #   if y >= FLOOR_TOP - water_level and b < WATER_SHADE:
     #       b = WATER_SHADE;  cell_owner = WATER_PAIR (unless a slugcat has it)
     #   for each chunk i:
@@ -169,6 +172,39 @@ sample_point:
     incq %rcx
     jmp  .sp_plat_loop
 .sp_plats_done:
+
+    #-----------------------------------------------------------------------------
+    # wet platforms: a thin water film on top, plat_wet / 8 subunits tall
+    #-----------------------------------------------------------------------------
+    movq $1, %rcx               # start at 1: the floor gets the lake instead
+.sp_film_loop:
+    cmpq $NUM_PLATS, %rcx
+    jge  .sp_films_done
+
+    cmpq plat_x0(,%rcx,8), %rdi # x outside the platform -> skip
+    jl   .sp_next_film
+    cmpq plat_x1(,%rcx,8), %rdi
+    jge  .sp_next_film
+    cmpq plat_y0(,%rcx,8), %rsi # y at or below the top -> not the film
+    jge  .sp_next_film
+    movq plat_wet(,%rcx,8), %r8
+    shrq $3, %r8                # r8 = film height = plat_wet / 8
+    movq plat_y0(,%rcx,8), %r9
+    subq %r8, %r9               # r9 = top of the film
+    cmpq %r9, %rsi              # y above the film -> skip
+    jl   .sp_next_film
+
+    cmpq $WATER_SHADE, %rax     # inside the film: water
+    jge  .sp_next_film
+    movq $WATER_SHADE, %rax
+    cmpq $0, cell_owner
+    jne  .sp_next_film
+    movq $WATER_PAIR, cell_owner
+
+.sp_next_film:
+    incq %rcx
+    jmp  .sp_film_loop
+.sp_films_done:
 
     #-----------------------------------------------------------------------------
     # water: below the surface (and not inside a platform)

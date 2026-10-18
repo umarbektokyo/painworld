@@ -45,7 +45,7 @@ draw_home:
     pushq %rbp
     movq  %rsp, %rbp
 
-    # attron(COLOR_PAIR(1)): the title in P1's yellow
+    # attron(COLOR_PAIR(1)): the title in P1's green
     movq $1, %rdi
     shlq $8, %rdi               # COLOR_PAIR(n) is just n << 8
     call attron
