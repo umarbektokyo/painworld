@@ -1,7 +1,3 @@
-# home.s - title (the one from the README) + menu, keys are in inputs.s
-# the title is unicode blocks, so it's UTF-8: 3 bytes per block in memory,
-# 1 cell on screen. that's why main.s calls setlocale and we link ncursesw.
-
     .include "constants.inc"
 
     .text

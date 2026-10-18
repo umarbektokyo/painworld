@@ -13,5 +13,5 @@ services:
     tty: true
     working_dir: /root/painworld
     environment:
-      - TERM=xterm-256color        # 256 colours inside the container
+      - TERM=xterm-256color
     command: /bin/bash

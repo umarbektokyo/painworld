@@ -1,4 +1,4 @@
-# end.s - end of round: the frozen fight with the winner + score on top
+# end of round: the frozen fight with the winner + score on top
 
     .include "constants.inc"
 

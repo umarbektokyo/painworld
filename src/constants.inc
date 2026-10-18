@@ -1,33 +1,27 @@
-# constants.inc - shared .equ values, .include'd by the files that use them
-#
-# positions/speeds are in subunits: a cell is 16 wide and 32 tall
-# (cells are ~2x taller than wide). so the 120x36 world is 1920x1152, y goes down.
-# this way things can move less than a cell per frame without floats.
-
-# ---- screen -----------------------------------------------------------------
+# screen
 .equ COLS,        120           # terminal width  (cells)
 .equ ROWS,        36            # terminal height (cells)
 .equ CELL_W,      16            # one cell is 16 subunits wide
-.equ CELL_H,      32            # ... and 32 subunits tall
+.equ CELL_H,      32            #     and 32 subunits tall
 .equ WORLD_W,     1920          # COLS * CELL_W
 .equ FRAME_US,    33000         # 33 ms per frame -> ~30 FPS (for usleep)
 
-# ---- brightness sampler -------------------------------------------------------
+# brightness sampler
 # every cell is tested at 2 x 4 = 8 points, SAMPLE_STEP apart, starting
-# SAMPLE_OFF from the cell's corner
+# SAMPLE_OFF in from the cell's corner
 .equ SUB_X,       2
 .equ SUB_Y,       4
 .equ SAMPLE_STEP, 8             # CELL_W / SUB_X  (= CELL_H / SUB_Y)
 .equ SAMPLE_OFF,  4             # SAMPLE_STEP / 2  -> sample the middle
 .equ TERRAIN_SHADE, 4           # brightness of platforms (0..9)
 
-# ---- players / body chunks ----------------------------------------------------
+# players / body chunks
 # a slugcat is 2 circles ("chunks"), index = player * 2 + part (0 head, 1 body)
 .equ NUM_PLAYERS, 2
 .equ NUM_CHUNKS,  4
 .equ NUM_PLATS,   6
 
-# ---- physics (subunits per frame) ------------------------------------------
+# physics
 .equ RUN_SPEED,   32            # top running speed       (2 cells/frame)
 .equ RUN_ACCEL,   2             # reach it fast: close 1/2 of the gap per frame
 .equ FRICTION_MUL, 3            # when not running: vx = vx * 3 / 4
@@ -38,11 +32,11 @@
 .equ JUMP_BODY,   50            # ...the body (~3.1): the jump stretches
 .equ KEY_HOLD,    12            # frames one key press keeps you running
 
-# ---- spine (spring between head and body) ----------------------------------
+# spine (spring between head and body)
 .equ REST_LEN,    64            # relaxed head-body distance (4 cells)
 .equ SPINE_DIV,   4             # fix 1/4 of the stretch per frame (springy)
 
-# ---- spears -----------------------------------------------------------------
+# spears
 .equ NUM_SPEARS,    6
 .equ SPEAR_STUCK,   0           # stuck in a platform, can be picked up
 .equ SPEAR_HELD,    1           # carried by spear_owner
@@ -50,11 +44,11 @@
 .equ SPEAR_SPEED,   56          # horizontal speed when thrown (~3.5)
 .equ SPEAR_LIFT,    8           # small upward kick when thrown
 .equ SPEAR_GRAVITY, 1           # spears fall slower than slugcats
-.equ SPEAR_MAX_FALL, 24         # < platform thickness, so it can't skip one
+.equ SPEAR_MAX_FALL, 24         # < platform thickness, so it cant skip one
 .equ GRAB_RANGE_X,  48          # how close the body must be to grab (3 cells)
 .equ GRAB_RANGE_Y,  96
 
-# ---- rain + flood -------------------------------------------------------------
+# rain + flood
 .equ MAX_DROPS,     1024        # raindrops falling at the same time
 .equ RAIN_SPEED,    24          # how far a drop falls per frame (~0.75 row)
 .equ RAIN_TRIES,    16          # spawn attempts per frame, each succeeding
@@ -73,28 +67,28 @@
 .equ WATER_SHADE,   3           # brightness of water (0..9)
 .equ WATER_PAIR,    3           # colour pair of water (blue)
 
-# ---- scenes -----------------------------------------------------------------
+# scenes
 .equ SCENE_HOME,    0
 .equ SCENE_GAME,    1
 .equ SCENE_END,     2
 .equ SCENE_GUIDE,   3
 .equ SCENE_CREDITS, 4
 
-# ---- colours (xterm 256-colour palette numbers) -----------------------------
-.equ P1_COLOR,    150           # #afd787 green  (closest to 195, 232, 141)
-.equ P2_COLOR,    209           # #ff875f orange (closest to 255, 150, 108)
+# colours (xterm 256-colour palette numbers)
+.equ P1_COLOR,    150           # #afd787 green
+.equ P2_COLOR,    209           # #ff875f orange
 
-# ---- sky shader (sky.s) ------------------------------------------------------
+# sky shader (sky.s)
 .equ SKY_BIAS_ROW, 8            # rows above this get extra clouds
 .equ SKY_THIN,     14           # v above this: thin cloud '.'
 .equ SKY_THICK,    20           # v above this: thick cloud ':'
 .equ SKY_PAIR,     4            # colour pair of the clouds
 .equ SKY_COLOR,    60           # #5f5f87 slate blue-grey
 
-# ---- misc -------------------------------------------------------------------
+# misc
 .equ LC_ALL,      6             # from <locale.h> (glibc)
 
-# ---- key codes (from <ncurses.h>) -----------------------------------------
+# key codes (from <ncurses.h>)
 .equ KEY_ESC,     27
 .equ KEY_NEWLINE, 10            # Enter (ncurses turns \r into \n)
 .equ KEY_DOWN,    258

@@ -1,9 +1,9 @@
-# text.s - draw_lines, used by the menu screens
+# draw_lines, used by the menu screens
 
     .text
     .globl draw_lines
 
-# void draw_lines(char **lines, long count, long row, long col)
+# void draw_lines(char *lines[], long count, long row, long col)
 #                  %rdi           %rsi        %rdx      %rcx
 # lines = table of string addresses (.quad str0, str1, ...)
 # does mvaddstr(row + i, col, lines[i]) for each line

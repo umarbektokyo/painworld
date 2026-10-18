@@ -1,10 +1,10 @@
-# spears.s - spawn, pick up, throw, fly, stick, kill
+# spear spawn, pick up, throw, fly, stick, kill
 #
 # a spear is always in one of 3 states:
 #   STUCK   upright in a platform, walk onto it to grab it
 #   HELD    follows the owner's head, points where they face
-#   FLYING  thrown, flies in a flat arc until it hits a platform (-> STUCK)
-#           or the other slugcat (-> round over)
+#   FLYING  thrown, flies in a flat arc until it hits a platform (then STUCK)
+#           or the other slugcat (then round over)
 
     .include "constants.inc"
 
