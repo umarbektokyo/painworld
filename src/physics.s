@@ -298,7 +298,7 @@ collide_chunk:
     cmpq plat_x0(,%rcx,8), %rax
     jl   .cc_next
     cmpq plat_x1(,%rcx,8), %rax
-    jg   .cc_next
+    jge  .cc_next               # x1 is already outside, like everywhere else
 
     movq chunk_y(,%rdi,8), %rax
     addq %r8, %rax              # bottom now

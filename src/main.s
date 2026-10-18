@@ -66,7 +66,7 @@ main:
     movq %rax, %rdi
     call srand
 
-    call reset_round            # fights.s
+    call reset_round            # physics.s
 
 .game_loop:
     call poll_input             # inputs.s

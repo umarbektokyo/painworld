@@ -1,4 +1,4 @@
-# constants.inc - shared .equ values, included by every .s file
+# constants.inc - shared .equ values, .include'd by the files that use them
 #
 # positions/speeds are in subunits: a cell is 16 wide and 32 tall
 # (cells are ~2x taller than wide). so the 120x36 world is 1920x1152, y goes down.
@@ -13,8 +13,8 @@
 .equ FRAME_US,    33000         # 33 ms per frame -> ~30 FPS (for usleep)
 
 # ---- brightness sampler -------------------------------------------------------
-# Each cell is tested at SUB_X * SUB_Y = 8 points (2 across, 4 down).
-# Points are SAMPLE_STEP apart and start SAMPLE_OFF from the cell's corner.
+# every cell is tested at 2 x 4 = 8 points, SAMPLE_STEP apart, starting
+# SAMPLE_OFF from the cell's corner
 .equ SUB_X,       2
 .equ SUB_Y,       4
 .equ SAMPLE_STEP, 8             # CELL_W / SUB_X  (= CELL_H / SUB_Y)
@@ -22,8 +22,7 @@
 .equ TERRAIN_SHADE, 4           # brightness of platforms (0..9)
 
 # ---- players / body chunks ----------------------------------------------------
-# Each slugcat is 2 circles ("chunks"): head and body.
-# Chunk index = player * 2 + part   (part 0 = head, 1 = body)
+# a slugcat is 2 circles ("chunks"), index = player * 2 + part (0 head, 1 body)
 .equ NUM_PLAYERS, 2
 .equ NUM_CHUNKS,  4
 .equ NUM_PLATS,   6
