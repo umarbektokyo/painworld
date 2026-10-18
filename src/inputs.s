@@ -11,7 +11,8 @@
     # Key map:
     #   P1: a / d  run      w  jump     s  stop     q  grab / throw spear
     #   P2: arrows run      UP jump     DOWN stop   .  grab / throw spear
-    #   Enter      next round (on the end screen)
+    #   Enter      menu: start | end screen: next round | guide/credits: back
+    #   g / c      menu: guide / credits
     #   x / Esc    quit
     #=============================================================================
 
@@ -57,6 +58,12 @@ poll_input:
     je   .enter
     cmpq $KEY_ENTER, %rbx
     je   .enter
+
+    # menu
+    cmpq $'g', %rbx
+    je   .guide
+    cmpq $'c', %rbx
+    je   .credits
 
     # P1 (WASD)
     movq $0, %rcx               # player 0
@@ -114,10 +121,35 @@ poll_input:
     jmp  .read_key
 
 .enter:
-    cmpq $SCENE_END, game_state         # only means something on the end screen
-    jne  .read_key
+    cmpq $SCENE_HOME, game_state        # menu: start a round
+    je   .start_round
+    cmpq $SCENE_END, game_state         # end screen: next round
+    je   .start_round
+    cmpq $SCENE_GUIDE, game_state       # guide / credits: back to the menu
+    je   .to_home
+    cmpq $SCENE_CREDITS, game_state
+    je   .to_home
+    jmp  .read_key                      # in the game: Enter does nothing
+
+.start_round:
     call reset_round                    # see fights.s
     movq $SCENE_GAME, game_state
+    jmp  .read_key
+
+.to_home:
+    movq $SCENE_HOME, game_state
+    jmp  .read_key
+
+.guide:
+    cmpq $SCENE_HOME, game_state        # only from the menu
+    jne  .read_key
+    movq $SCENE_GUIDE, game_state
+    jmp  .read_key
+
+.credits:
+    cmpq $SCENE_HOME, game_state        # only from the menu
+    jne  .read_key
+    movq $SCENE_CREDITS, game_state
     jmp  .read_key
 
 .quit:

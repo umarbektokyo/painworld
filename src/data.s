@@ -88,7 +88,7 @@ plat_y1:    .quad   768,   544,   544,   352
     #-----------------------------------------------------------------------------
     # Game flow
     #-----------------------------------------------------------------------------
-game_state: .quad SCENE_GAME   # start straight in the game for now
+game_state: .quad SCENE_HOME   # start on the menu
 quit_flag:  .quad 0            # 1 = leave the main loop
 last_key:   .quad 0            # last key code read (shown in the HUD)
 winner:     .quad 0            # player who won the last round, -1 = draw

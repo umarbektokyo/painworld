@@ -10,7 +10,8 @@
     #       switch game_state:
     #         SCENE_GAME: update_physics(); draw_game()
     #         SCENE_END:  draw_end()
-    #         otherwise:  draw_home()          (other scenes come later)
+    #         SCENE_GUIDE: draw_guide();  SCENE_CREDITS: draw_credits()
+    #         SCENE_HOME: draw_home()
     #       refresh()
     #       usleep(33000)
     #=============================================================================
@@ -90,8 +91,19 @@ main:
     je   .scene_game
     cmpq $SCENE_END, game_state
     je   .scene_end
-    # SCENE_HOME / GUIDE / CREDITS: only the home stub exists for now
-    call draw_home
+    cmpq $SCENE_GUIDE, game_state
+    je   .scene_guide
+    cmpq $SCENE_CREDITS, game_state
+    je   .scene_credits
+    call draw_home              # SCENE_HOME (see screens/home.s)
+    jmp  .frame_end
+
+.scene_guide:
+    call draw_guide             # see screens/guide.s
+    jmp  .frame_end
+
+.scene_credits:
+    call draw_credits           # see screens/credits.s
     jmp  .frame_end
 
 .scene_end:
