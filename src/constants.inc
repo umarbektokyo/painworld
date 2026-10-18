@@ -38,16 +38,19 @@
 .equ NUM_PLATS,   6
 
 # ---- physics (subunits per frame) ------------------------------------------
-.equ RUN_SPEED,   19            # top running speed       (~1.2 cells/frame)
-.equ GRAVITY,     3             # added to vy every frame (~0.19)
-.equ MAX_FALL,    40            # terminal velocity       (~2.5)
-.equ JUMP_HEAD,   42            # head gets a bigger kick (~2.6) than...
-.equ JUMP_BODY,   32            # ...the body (~2.0): the jump stretches
+.equ RUN_SPEED,   32            # top running speed       (2 cells/frame)
+.equ RUN_ACCEL,   2             # reach it fast: close 1/2 of the gap per frame
+.equ FRICTION_MUL, 3            # when not running: vx = vx * 3 / 4
+.equ FRICTION_DIV, 4
+.equ GRAVITY,     5             # added to vy every frame (~0.31)
+.equ MAX_FALL,    56            # terminal velocity       (~3.5)
+.equ JUMP_HEAD,   64            # head gets a bigger kick (~4.0) than...
+.equ JUMP_BODY,   50            # ...the body (~3.1): the jump stretches
 .equ KEY_HOLD,    12            # frames one key press keeps you running
 
 # ---- spine (spring between head and body) ----------------------------------
 .equ REST_LEN,    64            # relaxed head-body distance (4 cells)
-.equ SPINE_DIV,   5             # fix 1/5 of the stretch per frame (springy)
+.equ SPINE_DIV,   4             # fix 1/4 of the stretch per frame (springy)
 
 # ---- spears -----------------------------------------------------------------
 .equ NUM_SPEARS,    6
@@ -92,6 +95,14 @@
 .equ P2_COLOR,    209           # #ff875f orange (closest to 255, 150, 108)
 .equ P1_COLOR_8,  2             # fallback for 8-colour terminals: green
 .equ P2_COLOR_8,  1             #                                  red
+
+# ---- sky shader (sky.s) ------------------------------------------------------
+.equ SKY_BIAS_ROW, 8            # rows above this get extra clouds
+.equ SKY_THIN,     14           # v above this: thin cloud '.'
+.equ SKY_THICK,    20           # v above this: thick cloud ':'
+.equ SKY_PAIR,     4            # colour pair of the clouds
+.equ SKY_COLOR,    60           # #5f5f87 slate blue-grey
+.equ SKY_COLOR_8,  4            # 8-colour fallback: blue
 
 # ---- misc -------------------------------------------------------------------
 .equ LC_ALL,      6             # from <locale.h> (glibc)

@@ -49,6 +49,9 @@ Each slugcat is two circles, a head and a body, joined by a springy "spine". Onl
 ### Rendering (the brightness sampler)
 For every character cell, 8 points inside the cell (2 across, 4 down) are tested against the world: platforms, water and the slugcats' circles (centre = brightest). The average brightness picks a character from the ramp ` .:-=+*#%@`. A cell that is only partly covered gets a dimmer character, which is what makes the shapes look smooth. Spears, raindrops and text are drawn on top as plain characters.
 
+### Sky shader
+Every empty cell asks `sky_shade(col, row)` how cloudy it is, like a fragment shader. It adds three sine waves (looked up in a 64-byte table, so no floats) that drift at different speeds as `frame_count` ticks, plus a bias towards the top of the screen. High values become dim `.` / `:` clouds in slate grey, giving slow drifting storm clouds behind everything.
+
 ### Units
 Positions and speeds are stored in subunits: 16 subunits = 1 cell wide, and a cell is 32 subunits tall (cells are about twice as tall as they are wide). That gives sub-cell movement without floats.
 
@@ -68,6 +71,7 @@ read all pending keys → update physics (move, spine, collisions, spears, rain,
     ├── render.s                      # brightness sampler (draw_world, sample_point)
     ├── spears.s                      # spawn, grab/throw, flight, hits, drawing
     ├── rain.s                        # drops, splashes, flood, drowning
+    ├── sky.s                         # sky shader (drifting clouds)
     └── screens
         ├── fights.s                  # physics step, spine, collisions, round reset, HUD
         ├── end.s                     # end-of-round screen

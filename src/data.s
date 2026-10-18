@@ -19,7 +19,7 @@
     .globl drop_x, drop_y, drop_active, water_total, water_level, splash, plat_wet
     .globl rain_level, rain_clock, drowned
     .globl plat_x0, plat_y0, plat_x1, plat_y1
-    .globl game_state, quit_flag, last_key, kills, winner
+    .globl game_state, quit_flag, last_key, frame_count, kills, winner
     .globl cell_owner, ramp
 
     #-----------------------------------------------------------------------------
@@ -93,6 +93,7 @@ plat_y1:    .quad  1152,   928,   928,   736,   544,   544
 game_state: .quad SCENE_HOME   # start on the menu
 quit_flag:  .quad 0            # 1 = leave the main loop
 last_key:   .quad 0            # last key code read (shown in the HUD)
+frame_count: .quad 0           # +1 every frame: the sky's clock
 winner:     .quad 0            # player who won the last round, -1 = draw
 
     #-----------------------------------------------------------------------------

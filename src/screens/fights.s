@@ -15,7 +15,7 @@
     .globl draw_game
     .globl reset_round
 
-hud_text: .asciz " P1: wasd q | P2: arrows . | x: quit | kills %ld - %ld | rain %ld%% "
+hud_text: .asciz " %ld - %ld "
 
     #-----------------------------------------------------------------------------
     # void reset_round(void)
@@ -75,8 +75,8 @@ reset_round:
     # Per-frame simulation step:
     #   for each chunk i (player p = i / 2, part = i % 2):
     #       if part == head && move_timer[p] > 0:
-    #                             vx += (move_dir[p] * RUN_SPEED - vx) / 4
-    #       else:                 vx  = vx * 7 / 8          (friction)
+    #                             vx += (move_dir[p] * RUN_SPEED - vx) / 2
+    #       else:                 vx  = vx * 3 / 4          (friction)
     #       if jump_req[p] && on_ground[p]: vy = -jump_kick[part]
     #       vy = min(vy + GRAVITY, MAX_FALL)
     #       x += vx;  y += vy
@@ -119,22 +119,22 @@ update_physics:
     cmpq $0, move_timer(,%r12,8)
     jle  .friction
 
-    # vx += (move_dir[p] * RUN_SPEED - vx) / 4    -> ease towards top speed
+    # vx += (move_dir[p] * RUN_SPEED - vx) / RUN_ACCEL  -> ease to top speed
     movq move_dir(,%r12,8), %rax
     imulq $RUN_SPEED, %rax      # rax = target speed
     subq chunk_vx(,%rbx,8), %rax # rax = target - vx
     cqto                        # sign-extend rax into rdx (needed by idivq)
-    movq $4, %rcx
-    idivq %rcx                  # rax = (target - vx) / 4
+    movq $RUN_ACCEL, %rcx
+    idivq %rcx                  # rax = (target - vx) / RUN_ACCEL
     addq %rax, chunk_vx(,%rbx,8)
     jmp  .after_run
 
 .friction:
-    # vx = vx * 7 / 8    -> slow down a bit every frame
+    # vx = vx * FRICTION_MUL / FRICTION_DIV   -> slow down every frame
     movq chunk_vx(,%rbx,8), %rax
-    imulq $7, %rax
+    imulq $FRICTION_MUL, %rax
     cqto
-    movq $8, %rcx
+    movq $FRICTION_DIV, %rcx
     idivq %rcx                  # idivq rounds towards 0, so vx really reaches 0
     movq %rax, chunk_vx(,%rbx,8)
 
@@ -231,7 +231,7 @@ update_physics:
     #-----------------------------------------------------------------------------
     # void spine(long p /* %rdi */)
     #
-    # A spring between player p's head and body. Each frame it fixes 1/5 of the
+    # A spring between player p's head and body. Each frame it fixes 1/4 of the
     # difference between their distance and REST_LEN, so it stretches when
     # yanked and bounces back.
     #   dx = head.x - body.x;   dy = head.y - body.y
@@ -431,15 +431,9 @@ draw_game:
     call draw_rain              # see rain.s
     call draw_spears            # see spears.s
 
-    # mvprintw(0, 0, hud_text, kills[0], kills[1], rain_level / 10)
-    movq rain_level, %rax       # per mille -> percent
-    movq $0, %rdx
-    movq $10, %rcx
-    divq %rcx
-    movq %rax, %r9              # third  %ld: how hard it rains (%)
-
+    # mvprintw(0, 56, hud_text, kills[0], kills[1])   -> " 0 - 0 " at the top
     movq $0, %rdi               # row
-    movq $0, %rsi               # column
+    movq $56, %rsi              # column (about the middle of 120)
     movq $hud_text, %rdx        # format string
     movq kills, %rcx            # first  %ld: kills[0] (P1)
     movq kills+8, %r8           # second %ld: kills[1] (P2), 8 bytes further

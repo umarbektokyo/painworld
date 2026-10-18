@@ -74,6 +74,11 @@ main:
     movq $P2_COLOR, %rsi
     movq $0, %rdx
     call init_pair
+
+    movq $SKY_PAIR, %rdi        # init_pair(4, SKY_COLOR, BLACK): clouds
+    movq $SKY_COLOR, %rsi
+    movq $0, %rdx
+    call init_pair
     jmp  .colours_done
 
 .basic_colours:
@@ -84,6 +89,11 @@ main:
 
     movq $2, %rdi               # init_pair(2, RED, BLACK)
     movq $P2_COLOR_8, %rsi
+    movq $0, %rdx
+    call init_pair
+
+    movq $SKY_PAIR, %rdi        # init_pair(4, BLUE, BLACK): clouds
+    movq $SKY_COLOR_8, %rsi
     movq $0, %rdx
     call init_pair
 
@@ -109,6 +119,7 @@ main:
     #-----------------------------------------------------------------------------
 .game_loop:
     call poll_input             # read every key pressed since last frame
+    incq frame_count            # the sky shader's clock
 
     cmpq $1, quit_flag          # x or Esc pressed -> stop
     je   .done

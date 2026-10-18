@@ -27,6 +27,7 @@
     #                   y = row * CELL_H + sy * SAMPLE_STEP + SAMPLE_OFF
     #                   sum += sample_point(x, y)
     #           index = (sum + 4) / 8                  (average, rounded)
+    #           if index == 0: index = sky_shade(col, row)  (empty: sky)
     #           mvaddch(row, col, ramp[index] | COLOR_PAIR(cell_owner))
     #-----------------------------------------------------------------------------
 draw_world:
@@ -94,6 +95,16 @@ draw_world:
     # index = (sum + 4) / 8   -> average of the 8 samples, rounded
     addq $4, %r14
     shrq $3, %r14               # divide by 8
+
+    # nothing here? let the sky shader fill the cell (see sky.s)
+    cmpq $0, %r14
+    jne  .have_index
+    movq %r13, %rdi             # sky_shade(col, row)
+    movq %r12, %rsi
+    call sky_shade
+    movq %rax, %r14             # 0, 1 or 2
+    movq $SKY_PAIR, cell_owner  # dim cloud colour
+.have_index:
 
     movzbq ramp(%r14), %rdx     # rdx = ramp[index]  (the character)
     movq cell_owner, %rax
