@@ -17,7 +17,7 @@ credits_title:  .quad credits_title_0, credits_title_1, credits_title_2, credits
 credits_text_0: .asciz "              made by"
 credits_text_1: .asciz ""
 credits_text_2: .asciz "          Deniels Kruglovs"
-credits_text_3: .asciz "           Viesturs Kalis"
+credits_text_3: .asciz "           Viesturs Kālis"
 credits_text_4: .asciz "       Umarbek Bakhodirjonov"
 credits_text_5: .asciz "          Gabriel Cancinos"
 credits_text_6: .asciz ""

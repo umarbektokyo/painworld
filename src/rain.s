@@ -117,7 +117,8 @@ spawn_drop:
     #              drop stops
     #              if water_total > 0 or splash[c] > 0: water_total += DROP_WATER
     #              else:                                splash[c] = SPLASH_FRAMES
-    #          else if inside a platform (not the floor): drop stops
+    #          else if inside a platform (not the floor):
+    #              move it to the platform's nearer edge (it drips off there)
     #   4. every splash[c] counts down by 1
     #   5. water_level = water_total / COLS
     #-----------------------------------------------------------------------------
@@ -223,7 +224,20 @@ update_rain:
     cmpq plat_y1(,%rcx,8), %rsi
     jge  .ur_plat_next
 
-    movq $0, drop_active(,%rbx,8) # hit a platform: just disappears
+    # hit a platform: the water runs off to the nearer edge and drips from
+    # there, so it still ends up in the lake
+    movq plat_x0(,%rcx,8), %rax
+    addq plat_x1(,%rcx,8), %rax
+    shrq $1, %rax               # rax = middle of the platform
+    cmpq %rax, %rdi
+    jge  .ur_drip_right
+    movq plat_x0(,%rcx,8), %rax
+    decq %rax                   # just left of the platform
+    movq %rax, drop_x(,%rbx,8)
+    jmp  .ur_move_next
+.ur_drip_right:
+    movq plat_x1(,%rcx,8), %rax # just right of it (x1 is already outside)
+    movq %rax, drop_x(,%rbx,8)
     jmp  .ur_move_next
 
 .ur_plat_next:

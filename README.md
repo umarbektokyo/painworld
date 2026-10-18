@@ -15,70 +15,65 @@ It's like rain world but was made using assembly, thus in pain.
 ## Specs
 Start Date: October 14th
 Deadline: October 20th
-Language: x86-64 assembly, AT&T Syntax.
+Language: x86-64 assembly, AT&T Syntax. Linked with libc + ncursesw (no floats, everything is integer math).
+Terminal: at least 120 x 36 characters.
 
-## Game Scope (draft, is it realistic?)
-### Mechanic
-There are two creatures, on a static map. 
-The creatures (slugcats) can walk right/left, jump, and lying down with arror keys. You can think of a slugcat's core body consisting of a head and a bottom circles, with the head circle slightly larger than the bottom one. In IDLE, the head is above the bottom and slugcat is standing. Up jumps up by default. Moving right/left tilts the head into the corresponding direction and moves accordingly. Pressing down would allow it to lie down fully, thus in future dodging the spears.
-The location is multi-floor. There are ropes in the locations. If a slugcat is pressing up and is colliding with a rope, the jumping behaviour from the button up and down gets replaced with climbing. Though, when right/left + up is pressed, we are jumping out of the rope, thus just jumping as if our current poisition is the ground I suppose.
-In the platforms, there are randomly generated spears. When slugcat is hovering over the spear, pressing dot equips the spear and if equipt, throws it.
-Spear flies straight from the 75% of the height of the slugcat and horizontally and follows a semi-parabola shape. When flying, at all times it is horizontal. Once landed, it becomes vertical.
-At all times, we have a light rain, which drips slightly. When rain touches the ground, it dissapears in a sec. But, as the game continues, there is more and more rain, and rain doesn't dissapear when touching another rain instead of ground, thus this would allow one to create a drought which would kill of creatures in a game too long.
-The murdering (gets stabbed by a spear) ends th e game.
+## The Game
+Two slugcats, one keyboard, one static multi-floor map.
+- **Move**: run left/right and jump. Platforms can be jumped through from below and landed on from above.
+- **Spears**: spears spawn at random spots on the platforms. Walk onto one and press your spear key to pick it up, press it again to throw it the way you are facing. It flies in a shallow arc and sticks into whatever platform it lands on, so it can be picked up again. A hit kills.
+- **Rain**: it starts as a light drizzle and gets heavier every second. A drop that lands on dry floor disappears after a second, but rain landing on rain stays. Puddles turn into a lake that keeps rising. Rain hitting a platform drips off its edges. If your head goes under water, you drown.
+- **Rounds**: spear the other slugcat (or let them drown) to win the round. Both drowning at once is a draw. The kill count carries over between rounds.
 
-Please, let me know of how we can do it and everything. Where should we store the variables and how, how should we handle the physics and all, what should we do about inputs, and so on.
-Implementation plan:
-- We should be able to output an empty scene with unicode text-based rendering in terminal. (it should be fixed size, letting the user resize the terminal if it there is no enough space.)
-- Get inputs working, there must be aswd and arror keys for movement and q and dot for throwing/getting spears.  We should be able to display the buttons pressed as stats in the left-top corner of teh terminal window. 
-- Start working on a singular slugcat, define the physicsbasic controls and physics for basic freeform movement.
-- Create an environment with platforms, ropes and randomly generated spears.
-- Improve the slugcat furhtermore by adding climbing and spear pick-up/throw, and death.
+### Controls
+| | P1 (yellow) | P2 (red) |
+|---|---|---|
+| run | `a` / `d` | `←` / `→` |
+| jump | `w` | `↑` |
+| stop | `s` | `↓` |
+| grab / throw spear | `q` | `.` |
 
-Could you please let help me out with how exactly should I work on this? Perhaps suggestions on everything and then commented out logic on how each file should work? Then, we slowly go with the implementation plan, making it happen one by one.
-
+Menu: `Enter` start, `g` guide, `c` credits. `x` or `Esc` quits from anywhere.
 
 ### Scenes
-- Home Screen with start/guide/credits buttons
-- Game Flight Screen
-  Aim to make it modular from the start, background should be replacable so in case we have time, we can expand on it.
-  There are layers of rendering:
-  -2. Sky
-  -1. Background
-  0. Ground + Slugcats
-  1. Foreground + Rain
-  2. UI & Stats
-- Game End Screen with the kill count
-- Guide Screen which explains the controls
-- Credits Screen with us in ASCII + names
+- Home screen (title + menu)
+- Fight screen
+- End-of-round screen with the winner and kill count
+- Guide screen explaining the controls
+- Credits screen
 
-### Rendering Pipeline
-1. The scene is initially represented in an abstract vector representation.
-2. We have a grid of which each cell's brightness is checked by averaging the brightness in that location in abstract vector representation.
-3. Unicode text file is generated by mapping the colors and brightness into characters and then streaming it all into the terminal.
-4. Input for the next frame is taken which controls the abstract vector representation.
+## How It Works
+### Procedural animation
+Each slugcat is two circles, a head and a body, joined by a springy "spine". Only the head is driven by the keys, and the spine drags the body along. A jump kicks the head harder than the body. That's all it takes for the slugcat to lean when it runs, stretch when it jumps, and squash and wobble when it lands, without any animation frames.
 
-## Help here:
-So far, I have not started coding actual assembly yet. We have the sample demo but we are unsure on how we want to implement the actual thing. 
-I am thinking of this timeframe:
+### Rendering (the brightness sampler)
+For every character cell, 8 points inside the cell (2 across, 4 down) are tested against the world: platforms, water and the slugcats' circles (centre = brightest). The average brightness picks a character from the ramp ` .:-=+*#%@`. A cell that is only partly covered gets a dimmer character, which is what makes the shapes look smooth. Spears, raindrops and text are drawn on top as plain characters.
 
+### Units
+Positions and speeds are stored in subunits: 16 subunits = 1 cell wide, and a cell is 32 subunits tall (cells are about twice as tall as they are wide). That gives sub-cell movement without floats.
 
+### Frame loop (~30 FPS)
+read all pending keys → update physics (move, spine, collisions, spears, rain, drowning) → draw the current scene → `refresh()` → `usleep(33000)`.
 
+## Project Structure
+```
 .
-├── demo
-│   └── demo.s
-├── docker-compose.yml
-├── Dockerfile
-├── Makefile
-├── README.md
+├── Dockerfile / docker-compose.yml   # linux/amd64 dev container
+├── Makefile                          # builds src/**/*.s into build/, links ncursesw
 └── src
-    ├── data.s
-    ├── inputs.s
-    ├── rain.s
+    ├── constants.inc                 # every .equ (sizes, physics, keys)
+    ├── data.s                        # all game state (arrays of 8-byte values)
+    ├── main.s                        # ncurses setup, main loop, scene dispatch
+    ├── inputs.s                      # keys -> player actions / scene changes
+    ├── render.s                      # brightness sampler (draw_world, sample_point)
+    ├── spears.s                      # spawn, grab/throw, flight, hits, drawing
+    ├── rain.s                        # drops, splashes, flood, drowning
     └── screens
-        ├── fights.s
-        └── home.s
-
+        ├── fights.s                  # physics step, spine, collisions, round reset, HUD
+        ├── end.s                     # end-of-round screen
+        ├── home.s / guide.s / credits.s
+        └── text.s                    # draw_lines helper for the menu screens
+```
 
 ## Usage Guide (mac)
 ```bash
@@ -96,9 +91,9 @@ docker exec -it rain /bin/bash
 # to exit the container (at the end of the development, just type in:)
 exit
 
-# Build (assembles src/**/*.s into build/, links with ncurses)
+# Build (assembles src/**/*.s into build/, links with ncursesw)
 make
 
-# Build and run
+# Build and run (make the terminal at least 120 x 36 first)
 make run
 ```
