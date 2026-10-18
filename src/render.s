@@ -128,6 +128,8 @@ draw_world:
     # How bright is the world at point (x, y)? Returns 0..9.
     #   b = 0
     #   for each platform j: if (x, y) is inside it: b = TERRAIN_SHADE
+    #   if y >= FLOOR_TOP - water_level and b < WATER_SHADE:
+    #       b = WATER_SHADE;  cell_owner = WATER_PAIR (unless a slugcat has it)
     #   for each chunk i:
     #       d2 = (x - cx)^2 + (y - cy)^2       (squared distance, no sqrt!)
     #       r2 = r * r
@@ -167,6 +169,21 @@ sample_point:
     incq %rcx
     jmp  .sp_plat_loop
 .sp_plats_done:
+
+    #-----------------------------------------------------------------------------
+    # water: below the surface (and not inside a platform)
+    #-----------------------------------------------------------------------------
+    movq $FLOOR_TOP, %r8
+    subq water_level, %r8       # r8 = water surface
+    cmpq %r8, %rsi
+    jl   .sp_dry                # above the water
+    cmpq $WATER_SHADE, %rax
+    jge  .sp_dry                # a platform is brighter: keep it
+    movq $WATER_SHADE, %rax
+    cmpq $0, cell_owner         # don't paint a slugcat cell blue
+    jne  .sp_dry
+    movq $WATER_PAIR, cell_owner
+.sp_dry:
 
     #-----------------------------------------------------------------------------
     # body chunks (circles)

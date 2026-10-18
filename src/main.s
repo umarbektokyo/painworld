@@ -59,6 +59,11 @@ main:
     movq $0, %rdx
     call init_pair
 
+    movq $3, %rdi               # init_pair(3, BLUE, BLACK): rain + water
+    movq $4, %rsi
+    movq $0, %rdx
+    call init_pair
+
     #-----------------------------------------------------------------------------
     # first round
     #-----------------------------------------------------------------------------

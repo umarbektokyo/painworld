@@ -15,7 +15,7 @@
     .globl draw_game
     .globl reset_round
 
-hud_text: .asciz " P1: wasd + q spear | P2: arrows + . spear | x quit | kills %ld - %ld "
+hud_text: .asciz " P1: wasd q | P2: arrows . | x: quit | kills %ld - %ld | rain %ld%% "
 
     #-----------------------------------------------------------------------------
     # void reset_round(void)
@@ -25,7 +25,7 @@ hud_text: .asciz " P1: wasd + q spear | P2: arrows + . spear | x quit | kills %l
     #   for each chunk i: x, y = start_x[i], start_y[i];  vx = vy = 0
     #   for each player p: move_dir = start_dir[p]; timers/requests = 0;
     #                      held_spear[p] = -1
-    #   spawn_spears()
+    #   spawn_spears();  reset_rain()
     #-----------------------------------------------------------------------------
 reset_round:
     # prologue
@@ -62,6 +62,7 @@ reset_round:
 .rr_players_done:
 
     call spawn_spears           # see spears.s
+    call reset_rain             # see rain.s
 
     # epilogue
     movq %rbp, %rsp
@@ -84,6 +85,7 @@ reset_round:
     #                      on_ground[p] = 0
     #   for each chunk i: collide_chunk(i)       (sets on_ground[p] again)
     #   update_spears()
+    #   update_rain();  check_drowning()
     #
     # (grab_or_throw(p) also runs in the player loop when grab_req[p] is set)
     #-----------------------------------------------------------------------------
@@ -210,6 +212,12 @@ update_physics:
     # 4. Spears (held ones follow the head, thrown ones fly and may kill)
     #-----------------------------------------------------------------------------
     call update_spears
+
+    #-----------------------------------------------------------------------------
+    # 5. Rain + flood, then see if anyone's head is under water (rain.s)
+    #-----------------------------------------------------------------------------
+    call update_rain
+    call check_drowning
 
     # epilogue
     addq $8, %rsp
@@ -411,8 +419,8 @@ collide_chunk:
     # void draw_game(void)
     #
     # Layers (back to front): platforms + slugcats come from the brightness
-    # sampler (draw_world), spears are drawn on top, then the HUD text is
-    # written over the top row.
+    # sampler (draw_world, which also draws the water), then raindrops and
+    # spears on top, then the HUD text over the top row.
     #-----------------------------------------------------------------------------
 draw_game:
     # prologue
@@ -420,14 +428,16 @@ draw_game:
     movq  %rsp, %rbp
 
     call draw_world             # see render.s
+    call draw_rain              # see rain.s
     call draw_spears            # see spears.s
 
-    # mvprintw(0, 0, hud_text, kills[0], kills[1])
+    # mvprintw(0, 0, hud_text, kills[0], kills[1], rain_level)
     movq $0, %rdi               # row
     movq $0, %rsi               # column
     movq $hud_text, %rdx        # format string
     movq kills, %rcx            # first  %ld: kills[0] (P1)
     movq kills+8, %r8           # second %ld: kills[1] (P2), 8 bytes further
+    movq rain_level, %r9        # third  %ld: how hard it rains
     movq $0, %rax               # no float arguments (like printf)
     call mvprintw
 

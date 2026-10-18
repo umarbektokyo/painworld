@@ -10,6 +10,7 @@
     .globl draw_end
 
 end_title: .asciz "    P%ld WINS!    "
+end_draw:  .asciz "  DRAW: both drowned  "
 end_kills: .asciz " kills  P1: %ld   P2: %ld "
 end_help:  .asciz " Enter: next round   x: quit "
 
@@ -22,7 +23,11 @@ draw_end:
     movq  %rsp, %rbp
 
     call draw_world             # the world, frozen (no update_physics)
+    call draw_rain
     call draw_spears
+
+    cmpq $0, winner             # winner -1 = nobody (both drowned)
+    jl   .end_draw
 
     # mvprintw(9, 31, end_title, winner + 1)
     movq $9, %rdi
@@ -32,7 +37,17 @@ draw_end:
     incq %rcx                   # player 0 -> "P1"
     movq $0, %rax
     call mvprintw
+    jmp  .end_score
 
+.end_draw:
+    # mvprintw(9, 29, end_draw)
+    movq $9, %rdi
+    movq $29, %rsi
+    movq $end_draw, %rdx
+    movq $0, %rax
+    call mvprintw
+
+.end_score:
     # mvprintw(11, 27, end_kills, kills[0], kills[1])
     movq $11, %rdi
     movq $27, %rsi

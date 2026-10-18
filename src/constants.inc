@@ -61,6 +61,20 @@
 .equ GRAB_RANGE_X,  48          # how close the body must be to grab (3 cells)
 .equ GRAB_RANGE_Y,  96
 
+# ---- rain + flood -------------------------------------------------------------
+.equ MAX_DROPS,     128         # raindrops falling at the same time
+.equ RAIN_SPEED,    24          # how far a drop falls per frame (~0.75 row)
+.equ RAIN_TRIES,    4           # spawn attempts per frame...
+.equ RAIN_START,    3           # ...each succeeding rain_level% of the time
+.equ RAIN_MAX,      100
+.equ RAIN_RAMP_FRAMES, 45       # rain_level + 1 every 1.5 seconds
+.equ SPLASH_FRAMES, 30          # a drop on dry floor stays 1 second
+.equ DROP_WATER,    8           # water one drop adds to water_total
+.equ FLOOR_TOP,     704         # top of the floor (plat_y0[0])
+.equ SPLASH_ROW,    21          # the text row just above the floor
+.equ WATER_SHADE,   3           # brightness of water (0..9)
+.equ WATER_PAIR,    3           # colour pair of water (blue)
+
 # ---- scenes -----------------------------------------------------------------
 .equ SCENE_HOME,    0
 .equ SCENE_GAME,    1

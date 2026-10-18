@@ -16,6 +16,8 @@
     .globl move_dir, move_timer, jump_req, grab_req, on_ground, held_spear
     .globl spear_x, spear_y, spear_vx, spear_vy, spear_state, spear_owner
     .globl spear_dir
+    .globl drop_x, drop_y, drop_active, water_total, water_level, splash
+    .globl rain_level, rain_clock, drowned
     .globl plat_x0, plat_y0, plat_x1, plat_y1
     .globl game_state, quit_flag, last_key, kills, winner
     .globl cell_owner, ramp
@@ -61,6 +63,19 @@ spear_owner: .skip NUM_SPEARS * 8   # player holding / who threw it
 spear_dir:   .skip NUM_SPEARS * 8   # -1 / 1: which way the tip points
 
     #-----------------------------------------------------------------------------
+    # Rain + flood
+    #-----------------------------------------------------------------------------
+drop_x:      .skip MAX_DROPS * 8
+drop_y:      .skip MAX_DROPS * 8
+drop_active: .skip MAX_DROPS * 8    # 1 = this drop is falling
+water_total: .quad 0                # all the water that stayed, added up
+water_level: .quad 0                # water_total / COLS: height above the floor
+splash:      .skip COLS * 8         # frames left of a splash, per column
+rain_level:  .quad RAIN_START       # spawn chance (%), grows over time
+rain_clock:  .quad 0                # frames since rain_level last grew
+drowned:     .quad 0, 0             # per player: 1 = head is under water
+
+    #-----------------------------------------------------------------------------
     # Platforms: rectangles from (x0, y0) top-left to (x1, y1) bottom-right.
     # You can jump up through them and land on their top edge.
     #                floor  left   right  middle
@@ -76,7 +91,7 @@ plat_y1:    .quad   768,   544,   544,   352
 game_state: .quad SCENE_GAME   # start straight in the game for now
 quit_flag:  .quad 0            # 1 = leave the main loop
 last_key:   .quad 0            # last key code read (shown in the HUD)
-winner:     .quad 0            # player who won the last round
+winner:     .quad 0            # player who won the last round, -1 = draw
 
     #-----------------------------------------------------------------------------
     # Rendering
