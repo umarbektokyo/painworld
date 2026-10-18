@@ -49,6 +49,18 @@
 .equ REST_LEN,    64            # relaxed head-body distance (4 cells)
 .equ SPINE_DIV,   5             # fix 1/5 of the stretch per frame (springy)
 
+# ---- spears -----------------------------------------------------------------
+.equ NUM_SPEARS,    4
+.equ SPEAR_STUCK,   0           # stuck in a platform, can be picked up
+.equ SPEAR_HELD,    1           # carried by spear_owner
+.equ SPEAR_FLYING,  2           # thrown by spear_owner
+.equ SPEAR_SPEED,   56          # horizontal speed when thrown (~3.5)
+.equ SPEAR_LIFT,    8           # small upward kick when thrown
+.equ SPEAR_GRAVITY, 1           # spears fall slower than slugcats
+.equ SPEAR_MAX_FALL, 24         # < platform thickness, so it can't skip one
+.equ GRAB_RANGE_X,  48          # how close the body must be to grab (3 cells)
+.equ GRAB_RANGE_Y,  96
+
 # ---- scenes -----------------------------------------------------------------
 .equ SCENE_HOME,    0
 .equ SCENE_GAME,    1
@@ -58,6 +70,9 @@
 
 # ---- key codes (from <ncurses.h>) -----------------------------------------
 .equ KEY_ESC,     27
+.equ KEY_NEWLINE, 10
+.equ KEY_RETURN,  13
+.equ KEY_ENTER,   343           # Enter on the number pad
 .equ KEY_DOWN,    258
 .equ KEY_UP,      259
 .equ KEY_LEFT,    260

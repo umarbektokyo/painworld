@@ -9,6 +9,7 @@
     #       erase()
     #       switch game_state:
     #         SCENE_GAME: update_physics(); draw_game()
+    #         SCENE_END:  draw_end()
     #         otherwise:  draw_home()          (other scenes come later)
     #       refresh()
     #       usleep(33000)
@@ -59,6 +60,16 @@ main:
     call init_pair
 
     #-----------------------------------------------------------------------------
+    # first round
+    #-----------------------------------------------------------------------------
+    movq $0, %rdi               # srand(time(0)): different spears every run
+    call time
+    movq %rax, %rdi
+    call srand
+
+    call reset_round            # place slugcats + spears (see fights.s)
+
+    #-----------------------------------------------------------------------------
     # Main game loop
     #-----------------------------------------------------------------------------
 .game_loop:
@@ -72,8 +83,14 @@ main:
     # Scene dispatch based on game_state
     cmpq $SCENE_GAME, game_state
     je   .scene_game
-    # SCENE_HOME / END / GUIDE / CREDITS: only the home stub exists for now
+    cmpq $SCENE_END, game_state
+    je   .scene_end
+    # SCENE_HOME / GUIDE / CREDITS: only the home stub exists for now
     call draw_home
+    jmp  .frame_end
+
+.scene_end:
+    call draw_end               # frozen fight + winner (see screens/end.s)
     jmp  .frame_end
 
 .scene_game:

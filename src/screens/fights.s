@@ -13,8 +13,60 @@
     .text
     .globl update_physics
     .globl draw_game
+    .globl reset_round
 
-hud_text: .asciz " P1: a/d run, w jump, s stop | P2: arrows | x quit | key %3ld "
+hud_text: .asciz " P1: wasd + q spear | P2: arrows + . spear | x quit | kills %ld - %ld "
+
+    #-----------------------------------------------------------------------------
+    # void reset_round(void)
+    #
+    # Puts both slugcats back at the start and scatters new spears.
+    # kills[] is NOT reset, so the score carries over between rounds.
+    #   for each chunk i: x, y = start_x[i], start_y[i];  vx = vy = 0
+    #   for each player p: move_dir = start_dir[p]; timers/requests = 0;
+    #                      held_spear[p] = -1
+    #   spawn_spears()
+    #-----------------------------------------------------------------------------
+reset_round:
+    # prologue
+    pushq %rbp
+    movq  %rsp, %rbp
+
+    movq $0, %rcx               # rcx = chunk index
+.rr_chunk_loop:
+    cmpq $NUM_CHUNKS, %rcx
+    jge  .rr_chunks_done
+    movq start_x(,%rcx,8), %rax
+    movq %rax, chunk_x(,%rcx,8)
+    movq start_y(,%rcx,8), %rax
+    movq %rax, chunk_y(,%rcx,8)
+    movq $0, chunk_vx(,%rcx,8)
+    movq $0, chunk_vy(,%rcx,8)
+    incq %rcx
+    jmp  .rr_chunk_loop
+.rr_chunks_done:
+
+    movq $0, %rcx               # rcx = player index
+.rr_player_loop:
+    cmpq $NUM_PLAYERS, %rcx
+    jge  .rr_players_done
+    movq start_dir(,%rcx,8), %rax
+    movq %rax, move_dir(,%rcx,8)
+    movq $0, move_timer(,%rcx,8)
+    movq $0, jump_req(,%rcx,8)
+    movq $0, grab_req(,%rcx,8)
+    movq $0, on_ground(,%rcx,8)
+    movq $-1, held_spear(,%rcx,8)
+    incq %rcx
+    jmp  .rr_player_loop
+.rr_players_done:
+
+    call spawn_spears           # see spears.s
+
+    # epilogue
+    movq %rbp, %rsp
+    popq %rbp
+    ret
 
     #-----------------------------------------------------------------------------
     # void update_physics(void)
@@ -31,6 +83,9 @@ hud_text: .asciz " P1: a/d run, w jump, s stop | P2: arrows | x quit | key %3ld 
     #                      move_timer[p]-- (if > 0), jump_req[p] = 0,
     #                      on_ground[p] = 0
     #   for each chunk i: collide_chunk(i)       (sets on_ground[p] again)
+    #   update_spears()
+    #
+    # (grab_or_throw(p) also runs in the player loop when grab_req[p] is set)
     #-----------------------------------------------------------------------------
 update_physics:
     # prologue
@@ -120,6 +175,13 @@ update_physics:
     movq %rbx, %rdi
     call spine                  # spine(p)
 
+    cmpq $0, grab_req(,%rbx,8)  # grab/throw pressed?
+    je   .no_grab
+    movq %rbx, %rdi
+    call grab_or_throw          # grab_or_throw(p), see spears.s
+    movq $0, grab_req(,%rbx,8)
+.no_grab:
+
     cmpq $0, move_timer(,%rbx,8)
     jle  .timer_done
     decq move_timer(,%rbx,8)    # one frame of running used up
@@ -143,6 +205,11 @@ update_physics:
     incq %rbx
     jmp  .collide_loop
 .collide_done:
+
+    #-----------------------------------------------------------------------------
+    # 4. Spears (held ones follow the head, thrown ones fly and may kill)
+    #-----------------------------------------------------------------------------
+    call update_spears
 
     # epilogue
     addq $8, %rsp
@@ -344,7 +411,8 @@ collide_chunk:
     # void draw_game(void)
     #
     # Layers (back to front): platforms + slugcats come from the brightness
-    # sampler (draw_world), then the HUD text is written over the top row.
+    # sampler (draw_world), spears are drawn on top, then the HUD text is
+    # written over the top row.
     #-----------------------------------------------------------------------------
 draw_game:
     # prologue
@@ -352,12 +420,14 @@ draw_game:
     movq  %rsp, %rbp
 
     call draw_world             # see render.s
+    call draw_spears            # see spears.s
 
-    # mvprintw(0, 0, hud_text, last_key)
+    # mvprintw(0, 0, hud_text, kills[0], kills[1])
     movq $0, %rdi               # row
     movq $0, %rsi               # column
     movq $hud_text, %rdx        # format string
-    movq last_key, %rcx         # %ld in the format
+    movq kills, %rcx            # first  %ld: kills[0] (P1)
+    movq kills+8, %r8           # second %ld: kills[1] (P2), 8 bytes further
     movq $0, %rax               # no float arguments (like printf)
     call mvprintw
 

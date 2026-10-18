@@ -9,8 +9,9 @@
     # while the key is held down.
     #
     # Key map:
-    #   P1: a / d  run      w  jump     s  stop
-    #   P2: arrows run      UP jump     DOWN stop
+    #   P1: a / d  run      w  jump     s  stop     q  grab / throw spear
+    #   P2: arrows run      UP jump     DOWN stop   .  grab / throw spear
+    #   Enter      next round (on the end screen)
     #   x / Esc    quit
     #=============================================================================
 
@@ -49,6 +50,14 @@ poll_input:
     cmpq $KEY_ESC, %rbx
     je   .quit
 
+    # next round
+    cmpq $KEY_NEWLINE, %rbx
+    je   .enter
+    cmpq $KEY_RETURN, %rbx
+    je   .enter
+    cmpq $KEY_ENTER, %rbx
+    je   .enter
+
     # P1 (WASD)
     movq $0, %rcx               # player 0
     cmpq $'a', %rbx
@@ -59,6 +68,8 @@ poll_input:
     je   .jump
     cmpq $'s', %rbx
     je   .stop
+    cmpq $'q', %rbx
+    je   .grab
 
     # P2 (arrow keys)
     movq $1, %rcx               # player 1
@@ -70,6 +81,8 @@ poll_input:
     je   .jump
     cmpq $KEY_DOWN, %rbx
     je   .stop
+    cmpq $'.', %rbx
+    je   .grab
 
     jmp  .read_key              # some other key: ignore it
 
@@ -94,6 +107,17 @@ poll_input:
 
 .stop:
     movq $0, move_timer(,%rcx,8)        # move_timer[p] = 0
+    jmp  .read_key
+
+.grab:
+    movq $1, grab_req(,%rcx,8)          # grab_req[p] = 1 (physics handles it)
+    jmp  .read_key
+
+.enter:
+    cmpq $SCENE_END, game_state         # only means something on the end screen
+    jne  .read_key
+    call reset_round                    # see fights.s
+    movq $SCENE_GAME, game_state
     jmp  .read_key
 
 .quit:
