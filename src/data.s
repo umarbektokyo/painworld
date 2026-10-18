@@ -1,0 +1,58 @@
+    #=============================================================================
+    # painworld — src/data.s
+    # All game-state variables live here. Single source of truth for the sim.
+    # Every value is in subunits (see constants.inc): 16 subunits = 1 cell wide.
+    #
+    # Arrays are read with an index register, 8 bytes per entry:
+    #     movq chunk_x(,%rcx,8), %rax      # rax = chunk_x[rcx]
+    #=============================================================================
+
+    .include "constants.inc"
+
+    .data
+
+    .globl chunk_x, chunk_y, chunk_vx, chunk_vy, chunk_r
+    .globl move_dir, move_timer, jump_req, on_ground
+    .globl plat_x0, plat_y0, plat_x1, plat_y1
+    .globl game_state, quit_flag, last_key, cell_owner, ramp
+
+    #-----------------------------------------------------------------------------
+    # Body chunks (circles). Index = player * 2 + part (0 = head, 1 = body).
+    #                  P1 head  P1 body  P2 head  P2 body
+    #-----------------------------------------------------------------------------
+chunk_x:    .quad   240,     160,    1040,    1120   # centre x
+chunk_y:    .quad   160,     160,     160,     160   # centre y (they fall in)
+chunk_vx:   .quad     0,       0,       0,       0   # velocity x
+chunk_vy:   .quad     0,       0,       0,       0   # velocity y
+chunk_r:    .quad    42,      35,      42,      35   # radius (head is bigger)
+
+    #-----------------------------------------------------------------------------
+    # Per-player state. Index = player (0 = P1, 1 = P2).
+    #-----------------------------------------------------------------------------
+move_dir:   .quad 1, -1        # -1 = left, 1 = right
+move_timer: .quad 0, 0         # frames left to keep running (refilled by keys)
+jump_req:   .quad 0, 0         # 1 = jump was pressed this frame
+on_ground:  .quad 0, 0         # 1 = a chunk is standing on a platform
+
+    #-----------------------------------------------------------------------------
+    # Platforms: rectangles from (x0, y0) top-left to (x1, y1) bottom-right.
+    # You can jump up through them and land on their top edge.
+    #                floor  left   right  middle
+    #-----------------------------------------------------------------------------
+plat_x0:    .quad     0,   128,   832,   480
+plat_y0:    .quad   704,   512,   512,   320
+plat_x1:    .quad  1280,   448,  1152,   800
+plat_y1:    .quad   768,   544,   544,   352
+
+    #-----------------------------------------------------------------------------
+    # Game flow
+    #-----------------------------------------------------------------------------
+game_state: .quad SCENE_GAME   # start straight in the game for now
+quit_flag:  .quad 0            # 1 = leave the main loop
+last_key:   .quad 0            # last key code read (shown in the HUD)
+
+    #-----------------------------------------------------------------------------
+    # Rendering
+    #-----------------------------------------------------------------------------
+cell_owner: .quad 0            # colour pair of the slugcat in the current cell
+ramp:       .ascii " .:-=+*#%@" # brightness 0..9, dark -> bright

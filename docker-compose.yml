@@ -4,12 +4,12 @@ services:
     platform: linux/amd64
     container_name: rain
     volumes:
-      - ./src:/root/asm
+      - .:/root/painworld
     cap_add:
       - SYS_PTRACE
     security_opt:
       - seccomp:unconfined
     stdin_open: true
     tty: true
+    working_dir: /root/painworld
     command: /bin/bash
-
