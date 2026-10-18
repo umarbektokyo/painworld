@@ -14,17 +14,17 @@ credits_title_3: .asciz "\\__|_| \\___\\__,_|_|\\__/__/"
 credits_title:  .quad credits_title_0, credits_title_1, credits_title_2, credits_title_3
 .equ CREDITS_TITLE_COUNT, 4
 
-credits_text_0: .asciz "            painworld"
-credits_text_1: .asciz "   x86-64 assembly (AT&T) + ncurses"
-credits_text_2: .asciz ""
-credits_text_3: .asciz "             made by"
-credits_text_4: .asciz "      Umarbek Bakhodirjonov"
-credits_text_5: .asciz "        Gabriel Cancinos"
+credits_text_0: .asciz "              made by"
+credits_text_1: .asciz ""
+credits_text_2: .asciz "          Deniels Kruglovs"
+credits_text_3: .asciz "           Viesturs Kalis"
+credits_text_4: .asciz "       Umarbek Bakhodirjonov"
+credits_text_5: .asciz "          Gabriel Cancinos"
 credits_text_6: .asciz ""
-credits_text_7: .asciz "  inspired by Rain World (Videocult)"
+credits_text_7: .asciz " inspired by Rain World (Videocult)"
 credits_text_8: .asciz ""
 credits_text_9: .asciz ""
-credits_text_10: .asciz "       Enter: back to menu"
+credits_text_10: .asciz "        Enter: back to menu"
 
 credits_text:  .quad credits_text_0, credits_text_1, credits_text_2, credits_text_3, credits_text_4, credits_text_5, credits_text_6, credits_text_7, credits_text_8, credits_text_9, credits_text_10
 .equ CREDITS_TEXT_COUNT, 11
