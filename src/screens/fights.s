@@ -2,8 +2,10 @@
     # painworld — src/screens/fights.s
     # Game screen: physics update + drawing of the main playfield.
     #
-    # For now each slugcat is two separate circles (head + body) that get the
-    # same push from the keys. The springy spine that joins them comes next.
+    # Each slugcat is two circles (head + body) joined by a springy spine.
+    # Only the head is driven by the keys; the spine drags the body along.
+    # That is the whole procedural animation: lean when running, stretch when
+    # jumping, squash when landing all come out of the same few rules.
     #=============================================================================
 
     .include "constants.inc"
@@ -18,13 +20,15 @@ hud_text: .asciz " P1: a/d run, w jump, s stop | P2: arrows | x quit | key %3ld 
     # void update_physics(void)
     #
     # Per-frame simulation step:
-    #   for each chunk i (player p = i / 2):
-    #       if move_timer[p] > 0: vx += (move_dir[p] * RUN_SPEED - vx) / 4
+    #   for each chunk i (player p = i / 2, part = i % 2):
+    #       if part == head && move_timer[p] > 0:
+    #                             vx += (move_dir[p] * RUN_SPEED - vx) / 4
     #       else:                 vx  = vx * 7 / 8          (friction)
-    #       if jump_req[p] && on_ground[p]: vy = -JUMP_SPEED
+    #       if jump_req[p] && on_ground[p]: vy = -jump_kick[part]
     #       vy = min(vy + GRAVITY, MAX_FALL)
     #       x += vx;  y += vy
-    #   for each player p: move_timer[p]-- (if > 0), jump_req[p] = 0,
+    #   for each player p: spine(p)                (pull head + body together)
+    #                      move_timer[p]-- (if > 0), jump_req[p] = 0,
     #                      on_ground[p] = 0
     #   for each chunk i: collide_chunk(i)       (sets on_ground[p] again)
     #-----------------------------------------------------------------------------
@@ -36,6 +40,8 @@ update_physics:
     # callee-conventions
     pushq %rbx                  # rbx = chunk index i  (or player index)
     pushq %r12                  # r12 = player index p of chunk i
+    pushq %r13                  # r13 = part of chunk i (0 = head, 1 = body)
+    subq  $8, %rsp              # keep the stack 16-byte aligned
 
     #-----------------------------------------------------------------------------
     # 1. Move every chunk
@@ -47,8 +53,12 @@ update_physics:
 
     movq %rbx, %r12
     shrq $1, %r12               # p = i / 2
+    movq %rbx, %r13
+    andq $1, %r13               # part = i % 2   (lowest bit)
 
-    # running or friction?
+    # only the head runs; the body just slides and gets dragged by the spine
+    cmpq $1, %r13
+    je   .friction
     cmpq $0, move_timer(,%r12,8)
     jle  .friction
 
@@ -77,7 +87,9 @@ update_physics:
     je   .no_jump
     cmpq $0, on_ground(,%r12,8)
     je   .no_jump
-    movq $-JUMP_SPEED, chunk_vy(,%rbx,8) # negative = up
+    movq jump_kick(,%r13,8), %rax # head and body get different kicks
+    negq %rax                   # negative = up
+    movq %rax, chunk_vy(,%rbx,8)
 .no_jump:
 
     # gravity, capped at MAX_FALL
@@ -105,6 +117,9 @@ update_physics:
     cmpq $NUM_PLAYERS, %rbx
     jge  .players_done
 
+    movq %rbx, %rdi
+    call spine                  # spine(p)
+
     cmpq $0, move_timer(,%rbx,8)
     jle  .timer_done
     decq move_timer(,%rbx,8)    # one frame of running used up
@@ -130,8 +145,122 @@ update_physics:
 .collide_done:
 
     # epilogue
+    addq $8, %rsp
+    popq %r13
     popq %r12
     popq %rbx
+    movq %rbp, %rsp
+    popq %rbp
+    ret
+
+    #-----------------------------------------------------------------------------
+    # void spine(long p /* %rdi */)
+    #
+    # A spring between player p's head and body. Each frame it fixes 1/5 of the
+    # difference between their distance and REST_LEN, so it stretches when
+    # yanked and bounces back.
+    #   dx = head.x - body.x;   dy = head.y - body.y
+    #   d  = isqrt(dx*dx + dy*dy)
+    #   if d == 0: return
+    #   cx = dx * (d - REST_LEN) / (d * SPINE_DIV)
+    #   cy = dy * (d - REST_LEN) / (d * SPINE_DIV)
+    #   head.x -= cx; head.vx -= cx;   head.y -= cy; head.vy -= cy
+    #   body.x += cx; body.vx += cx;   body.y += cy; body.vy += cy
+    # (Changing the velocity too is what makes it springy instead of rigid.)
+    #-----------------------------------------------------------------------------
+spine:
+    # prologue
+    pushq %rbp
+    movq  %rsp, %rbp
+
+    # callee-conventions
+    pushq %rbx                  # rbx = head index
+    pushq %r12                  # r12 = body index
+    pushq %r13                  # r13 = dx
+    pushq %r14                  # r14 = dy
+
+    movq %rdi, %rbx
+    shlq $1, %rbx               # head = p * 2
+    movq %rbx, %r12
+    incq %r12                   # body = p * 2 + 1
+
+    movq chunk_x(,%rbx,8), %r13
+    subq chunk_x(,%r12,8), %r13 # dx = head.x - body.x
+    movq chunk_y(,%rbx,8), %r14
+    subq chunk_y(,%r12,8), %r14 # dy = head.y - body.y
+
+    movq %r13, %rdi
+    imulq %r13, %rdi            # rdi = dx * dx
+    movq %r14, %rax
+    imulq %r14, %rax            # rax = dy * dy
+    addq %rax, %rdi             # rdi = dx*dx + dy*dy
+    call isqrt                  # rax = d
+
+    cmpq $0, %rax               # head exactly on body: no direction, skip
+    je   .spine_done
+
+    movq %rax, %r8
+    imulq $SPINE_DIV, %r8       # r8 = d * SPINE_DIV        (divisor)
+    movq %rax, %r9
+    subq $REST_LEN, %r9         # r9 = d - REST_LEN         (how stretched)
+
+    movq %r13, %rax             # cx = dx * (d - REST_LEN) / (d * SPINE_DIV)
+    imulq %r9, %rax
+    cqto
+    idivq %r8
+    movq %rax, %r10             # r10 = cx
+
+    movq %r14, %rax             # cy = dy * (d - REST_LEN) / (d * SPINE_DIV)
+    imulq %r9, %rax
+    cqto
+    idivq %r8
+    movq %rax, %r11             # r11 = cy
+
+    subq %r10, chunk_x(,%rbx,8) # head moves towards the body...
+    subq %r10, chunk_vx(,%rbx,8)
+    subq %r11, chunk_y(,%rbx,8)
+    subq %r11, chunk_vy(,%rbx,8)
+    addq %r10, chunk_x(,%r12,8) # ...and the body towards the head
+    addq %r10, chunk_vx(,%r12,8)
+    addq %r11, chunk_y(,%r12,8)
+    addq %r11, chunk_vy(,%r12,8)
+
+.spine_done:
+    # epilogue
+    popq %r14
+    popq %r13
+    popq %r12
+    popq %rbx
+    movq %rbp, %rsp
+    popq %rbp
+    ret
+
+    #-----------------------------------------------------------------------------
+    # long isqrt(long n /* %rdi */) -> %rax
+    #
+    # Integer square root: the biggest r with r * r <= n.
+    #   r = 0
+    #   while (r + 1) * (r + 1) <= n: r++
+    #   return r
+    # Slow for huge numbers, but our distances are only ~100, so it's fine.
+    #-----------------------------------------------------------------------------
+isqrt:
+    # prologue
+    pushq %rbp
+    movq  %rsp, %rbp
+
+    movq $0, %rax               # r = 0
+.isqrt_loop:
+    movq %rax, %rcx
+    incq %rcx                   # rcx = r + 1
+    imulq %rcx, %rcx            # rcx = (r + 1) * (r + 1)
+    cmpq %rdi, %rcx
+    jg   .isqrt_done            # (r + 1)^2 > n -> r is the answer
+    incq %rax                   # r++
+    jmp  .isqrt_loop
+
+.isqrt_done:
+    # epilogue
     movq %rbp, %rsp
     popq %rbp
     ret

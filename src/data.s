@@ -11,7 +11,7 @@
 
     .data
 
-    .globl chunk_x, chunk_y, chunk_vx, chunk_vy, chunk_r
+    .globl chunk_x, chunk_y, chunk_vx, chunk_vy, chunk_r, jump_kick
     .globl move_dir, move_timer, jump_req, on_ground
     .globl plat_x0, plat_y0, plat_x1, plat_y1
     .globl game_state, quit_flag, last_key, cell_owner, ramp
@@ -25,6 +25,9 @@ chunk_y:    .quad   160,     160,     160,     160   # centre y (they fall in)
 chunk_vx:   .quad     0,       0,       0,       0   # velocity x
 chunk_vy:   .quad     0,       0,       0,       0   # velocity y
 chunk_r:    .quad    42,      35,      42,      35   # radius (head is bigger)
+
+    # Jump kick per part. Index = part (0 = head, 1 = body).
+jump_kick:  .quad JUMP_HEAD, JUMP_BODY
 
     #-----------------------------------------------------------------------------
     # Per-player state. Index = player (0 = P1, 1 = P2).

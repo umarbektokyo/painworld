@@ -41,8 +41,13 @@
 .equ RUN_SPEED,   19            # top running speed       (~1.2 cells/frame)
 .equ GRAVITY,     3             # added to vy every frame (~0.19)
 .equ MAX_FALL,    40            # terminal velocity       (~2.5)
-.equ JUMP_SPEED,  40            # vy right after a jump   (~2.5)
+.equ JUMP_HEAD,   42            # head gets a bigger kick (~2.6) than...
+.equ JUMP_BODY,   32            # ...the body (~2.0): the jump stretches
 .equ KEY_HOLD,    12            # frames one key press keeps you running
+
+# ---- spine (spring between head and body) ----------------------------------
+.equ REST_LEN,    64            # relaxed head-body distance (4 cells)
+.equ SPINE_DIV,   5             # fix 1/5 of the stretch per frame (springy)
 
 # ---- scenes -----------------------------------------------------------------
 .equ SCENE_HOME,    0
