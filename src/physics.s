@@ -16,7 +16,7 @@ reset_round:
 .rr_chunk_loop:
     cmpq $NUM_CHUNKS, %rcx      # done all 4 chunks?
     jge  .rr_chunks_done        #   yes -> go reset the players
-    movq start_x(,%rcx,8), %rax # x = start x (memory -> memory needs a register)
+    movq start_x(,%rcx,8), %rax # x = start x
     movq %rax, chunk_x(,%rcx,8)
     movq start_y(,%rcx,8), %rax # y = start y (high up, they fall in)
     movq %rax, chunk_y(,%rcx,8)
@@ -130,6 +130,7 @@ update_physics:
 .move_done:
     # 2. per player
     movq $0, %rbx               # p = 0
+
 .player_loop:
     cmpq $NUM_PLAYERS, %rbx     # done both players?
     jge  .players_done
@@ -142,21 +143,23 @@ update_physics:
     movq %rbx, %rdi             # grab_or_throw(p: player), spears.s
     call grab_or_throw
     movq $0, grab_req(,%rbx,8)  # handled
-.no_grab:
 
+.no_grab:
     cmpq $0, move_timer(,%rbx,8) # still running?
     jle  .timer_done
     decq move_timer(,%rbx,8)    # one frame of running used up
+
 .timer_done:
     movq $0, jump_req(,%rbx,8)  # the jump already happened in step 1
     movq $0, on_ground(,%rbx,8) # collide_chunk sets it again if we're standing
 
     incq %rbx                   # next player
     jmp  .player_loop
-.players_done:
 
+.players_done:
     # 3. collisions
     movq $0, %rbx               # i = 0
+
 .collide_loop:
     cmpq $NUM_CHUNKS, %rbx
     jge  .collide_done
@@ -164,8 +167,8 @@ update_physics:
     call collide_chunk          # land on platforms, stay on screen
     incq %rbx
     jmp  .collide_loop
-.collide_done:
 
+.collide_done:
     call update_spears          # 4. spears.s
     call update_rain            # 5. rain.s
     call check_drowning         # head under water -> round over
