@@ -13,6 +13,29 @@ It's like rain world but was made using assembly, thus in pain.
                                                                        ███    ███ ▀
 ```
 
+## Usage Guide (mac)
+```bash
+# Ensure docker desktop is up and running
+# Notice that you can edit files under src/,
+# and they will automatically sync to the docker container!
+
+# start docker container
+docker compose up -d
+# to stop the docker container, run:
+docker compose down
+
+# get into the container
+docker exec -it rain /bin/bash
+# to exit the container (at the end of the development, just type in:)
+exit
+
+# Build (assembles src/**/*.s into build/, links with ncursesw)
+make
+
+# Build and run (make the terminal at least 120 x 36 first)
+make run
+```
+
 ## Specs
 Start Date: October 14th
 Deadline: October 20th
@@ -81,27 +104,4 @@ Team docs (overview + one deep-dive per area) are in [docs/](docs/OVERVIEW.md).
         ├── end.s                     # end-of-round screen
         ├── home.s / guide.s / credits.s
         └── text.s                    # draw_lines helper for the menu screens
-```
-
-## Usage Guide (mac)
-```bash
-# Ensure docker desktop is up and running
-# Notice that you can edit files under src/,
-# and they will automatically sync to the docker container!
-
-# start docker container
-docker compose up -d
-# to stop the docker container, run:
-docker compose down
-
-# get into the container
-docker exec -it rain /bin/bash
-# to exit the container (at the end of the development, just type in:)
-exit
-
-# Build (assembles src/**/*.s into build/, links with ncursesw)
-make
-
-# Build and run (make the terminal at least 120 x 36 first)
-make run
 ```
