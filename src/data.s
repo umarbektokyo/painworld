@@ -72,5 +72,5 @@ frame_count: .quad 0            # +1 every frame, the sky uses it as time
 winner:      .quad 0            # -1 = draw
 
 cell_owner:  .quad 0            # colour pair for the cell being drawn
-ramp:        .ascii " ::-=+*#%@" # brightness 0..9, needs exactly 10 chars
+ramp:        .ascii " .:-=+*#%@" # brightness 0..9, needs exactly 10 chars
 # ramp:        .ascii " 123456789" # brightness 0..9
