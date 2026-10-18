@@ -29,82 +29,85 @@ draw_world:
     pushq %r14                  # sum
     pushq %r15                  # sy
     subq  $8, %rsp              # stack aligned for mvaddch
+                                # (all in callee-saved regs, they survive the calls)
 
-    movq $0, %r12
+    movq $0, %r12               # row = 0
 .row_loop:
-    cmpq $ROWS, %r12
+    cmpq $ROWS, %r12            # done all 36 rows?
     jge  .rows_done
 
-    movq $0, %r13
+    movq $0, %r13               # col = 0
 .col_loop:
-    cmpq $COLS, %r13
+    cmpq $COLS, %r13            # done all 120 columns of this row?
     jge  .next_row
 
-    movq $0, %r14
+    movq $0, %r14               # sum = 0, brightness of this cell so far
     movq $0, cell_owner         # sample_point sets it if it sees something coloured
 
-    movq $0, %r15
+    movq $0, %r15               # sy = 0, sample row inside the cell (0..3)
 .sy_loop:
-    cmpq $SUB_Y, %r15
+    cmpq $SUB_Y, %r15           # done 4 sample rows?
     jge  .samples_done
 
-    movq $0, %rbx
+    movq $0, %rbx               # sx = 0, sample column inside the cell (0..1)
 .sx_loop:
-    cmpq $SUB_X, %rbx
+    cmpq $SUB_X, %rbx           # done 2 samples across?
     jge  .next_sy
 
     # sample_point(x: col*CELL_W + sx*SAMPLE_STEP + SAMPLE_OFF,
     #              y: row*CELL_H + sy*SAMPLE_STEP + SAMPLE_OFF)
     movq %r13, %rdi
-    imulq $CELL_W, %rdi
+    imulq $CELL_W, %rdi         # left edge of the cell in subunits
     movq %rbx, %rax
-    imulq $SAMPLE_STEP, %rax
+    imulq $SAMPLE_STEP, %rax    # + 0 or 8 for the 1st / 2nd sample across
     addq %rax, %rdi
-    addq $SAMPLE_OFF, %rdi
+    addq $SAMPLE_OFF, %rdi      # + 4, so we sample the middle of each piece
 
     # y = row * CELL_H + sy * SAMPLE_STEP + SAMPLE_OFF
     movq %r12, %rsi
-    imulq $CELL_H, %rsi
+    imulq $CELL_H, %rsi         # top edge of the cell
     movq %r15, %rax
-    imulq $SAMPLE_STEP, %rax
+    imulq $SAMPLE_STEP, %rax    # + 0, 8, 16 or 24
     addq %rax, %rsi
-    addq $SAMPLE_OFF, %rsi
+    addq $SAMPLE_OFF, %rsi      # + 4
 
-    call sample_point
-    addq %rax, %r14
+    call sample_point           # rax = brightness 0..9 at that point
+    addq %rax, %r14             # sum += it
 
-    incq %rbx
+    incq %rbx                   # next sample across
     jmp  .sx_loop
 .next_sy:
-    incq %r15
+    incq %r15                   # next sample row
     jmp  .sy_loop
 
 .samples_done:
     addq $4, %r14               # (sum + 4) / 8
-    shrq $3, %r14
+    shrq $3, %r14               # = the average of the 8 samples, rounded
+                                # (+4 is half of 8, that makes it round
+                                #  instead of always rounding down)
 
     cmpq $0, %r14               # empty -> sky
     jne  .have_index
     movq %r13, %rdi             # sky_shade(col: col, row: row)
     movq %r12, %rsi
     call sky_shade              # sky.s, gives 0, 1 or 2
-    movq %rax, %r14
-    movq $SKY_PAIR, cell_owner
+    movq %rax, %r14             # use the cloud brightness instead
+    movq $SKY_PAIR, cell_owner  # and the grey cloud colour
 .have_index:
 
-    movzbq ramp(%r14), %rdx     # the char
+    movzbq ramp(%r14), %rdx     # the char, ramp[index] (one byte, zero-extended)
     movq cell_owner, %rax
     shlq $8, %rax               # COLOR_PAIR(n) is just n << 8
-    orq  %rax, %rdx
+    orq  %rax, %rdx             # char in the low 8 bits, colour above it
 
     movq %r12, %rdi             # mvaddch(row: row, col: col, ch: char | colour)
     movq %r13, %rsi
-    call mvaddch
+    call mvaddch                # into ncurses' screen buffer, shown at refresh
 
-    incq %r13
+    incq %r13                   # next column
     jmp  .col_loop
 .next_row:
-    incq %r12
+    incq %r12                   # next row
     jmp  .row_loop
 
 .rows_done:
@@ -135,15 +138,15 @@ sample_point:
     # platforms
     call find_platform          # find_platform(x: x, y: y), already in rdi/rsi
                                 # rax = platform or -1, rdi/rsi untouched
-    cmpq $0, %rax
+    cmpq $0, %rax               # not inside any platform?
     jl   .sp_films
-    movq $TERRAIN_SHADE, %r10
+    movq $TERRAIN_SHADE, %r10   # inside one -> brightness 4
 
     # wet film on top of platforms (not the floor, that gets the lake)
 .sp_films:
-    movq $1, %rcx
+    movq $1, %rcx               # platform 1 (0 is the floor)
 .sp_film_loop:
-    cmpq $NUM_PLATS, %rcx
+    cmpq $NUM_PLATS, %rcx       # done all platforms?
     jge  .sp_lake
 
     cmpq plat_x0(,%rcx,8), %rdi # x outside -> skip
@@ -166,15 +169,15 @@ sample_point:
     jne  .sp_next_film
     movq $WATER_PAIR, cell_owner
 .sp_next_film:
-    incq %rcx
+    incq %rcx                   # next platform
     jmp  .sp_film_loop
 
     # the lake
 .sp_lake:
     movq $FLOOR_TOP, %r8
     subq water_level, %r8       # surface
-    cmpq %r8, %rsi
-    jl   .sp_chunks
+    cmpq %r8, %rsi              # point above the surface?
+    jl   .sp_chunks             #   -> dry, skip
     cmpq $WATER_SHADE, %r10     # make it water, unless something brighter
     jge  .sp_chunks             # is already here
     movq $WATER_SHADE, %r10
@@ -184,49 +187,49 @@ sample_point:
 
     # the slugcats
 .sp_chunks:
-    movq $0, %rcx
+    movq $0, %rcx               # chunk i = 0
 .sp_chunk_loop:
-    cmpq $NUM_CHUNKS, %rcx
+    cmpq $NUM_CHUNKS, %rcx      # done all 4 circles?
     jge  .sp_done
 
     movq %rdi, %r8
-    subq chunk_x(,%rcx,8), %r8
+    subq chunk_x(,%rcx,8), %r8  # dx = point x - circle centre x
     imulq %r8, %r8              # dx * dx
     movq %rsi, %r9
-    subq chunk_y(,%rcx,8), %r9
+    subq chunk_y(,%rcx,8), %r9  # dy = point y - circle centre y
     imulq %r9, %r9              # dy * dy
-    addq %r9, %r8               # r8 = d2
+    addq %r9, %r8               # r8 = d2, distance squared (pythagoras)
     movq chunk_r(,%rcx,8), %r9
-    imulq %r9, %r9              # r9 = r2
+    imulq %r9, %r9              # r9 = r2, radius squared
 
-    cmpq %r9, %r8
-    jge  .sp_next_chunk         # outside
+    cmpq %r9, %r8               # d2 >= r2 means d >= r,
+    jge  .sp_next_chunk         # outside, no sqrt needed
 
     movq $6, %r11               # edge
     shlq $1, %r8                # d2 * 2
-    cmpq %r9, %r8
+    cmpq %r9, %r8               # 2*d2 < r2 means d < 0.71 r
     jge  .sp_have_shade
     movq $8, %r11               # middle (d < 0.71 r)
     shlq $1, %r8                # d2 * 4
-    cmpq %r9, %r8
+    cmpq %r9, %r8               # 4*d2 < r2 means d < r / 2
     jge  .sp_have_shade
     movq $9, %r11               # centre (d < r / 2)
-.sp_have_shade:
+.sp_have_shade:                 # brighter in the middle = looks round
 
     cmpq %r10, %r11
     jle  .sp_next_chunk         # not brighter
-    movq %r11, %r10
+    movq %r11, %r10             # new brightest thing at this point
     movq %rcx, %r8
     shrq $1, %r8                # player = chunk / 2
     incq %r8                    # colour pair = player + 1
-    movq %r8, cell_owner
+    movq %r8, cell_owner        # so the cell gets P1 green / P2 orange
 
 .sp_next_chunk:
-    incq %rcx
+    incq %rcx                   # next circle
     jmp  .sp_chunk_loop
 
 .sp_done:
-    movq %r10, %rax
+    movq %r10, %rax             # return the brightest value we found
     # epilogue
     movq %rbp, %rsp
     popq %rbp
@@ -241,25 +244,25 @@ find_platform:
     movq  %rsp, %rbp
 
     movq $-1, %rax              # not found (yet)
-    movq $0, %rcx
+    movq $0, %rcx               # platform j = 0
 .fp_loop:
-    cmpq $NUM_PLATS, %rcx
+    cmpq $NUM_PLATS, %rcx       # checked all 6?
     jge  .fp_done
 
-    cmpq plat_x0(,%rcx,8), %rdi
+    cmpq plat_x0(,%rcx,8), %rdi # left of it?
     jl   .fp_next
-    cmpq plat_x1(,%rcx,8), %rdi
+    cmpq plat_x1(,%rcx,8), %rdi # right of it?
     jge  .fp_next
-    cmpq plat_y0(,%rcx,8), %rsi
+    cmpq plat_y0(,%rcx,8), %rsi # above it?
     jl   .fp_next
-    cmpq plat_y1(,%rcx,8), %rsi
+    cmpq plat_y1(,%rcx,8), %rsi # below it?
     jge  .fp_next
 
     movq %rcx, %rax             # found it
     jmp  .fp_done
 
 .fp_next:
-    incq %rcx
+    incq %rcx                   # next platform
     jmp  .fp_loop
 
 .fp_done:
