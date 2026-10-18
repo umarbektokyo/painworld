@@ -42,18 +42,18 @@ draw_guide:
     pushq %rbp
     movq  %rsp, %rbp
 
-    # draw_lines(guide_title, GUIDE_TITLE_COUNT, 1, 29)
+    # draw_lines(guide_title, GUIDE_TITLE_COUNT, 7, 49)
     movq $guide_title, %rdi
     movq $GUIDE_TITLE_COUNT, %rsi
-    movq $1, %rdx
-    movq $29, %rcx
+    movq $7, %rdx
+    movq $49, %rcx
     call draw_lines
 
-    # draw_lines(guide_text, GUIDE_TEXT_COUNT, 7, 6)
+    # draw_lines(guide_text, GUIDE_TEXT_COUNT, 13, 26)
     movq $guide_text, %rdi
     movq $GUIDE_TEXT_COUNT, %rsi
-    movq $7, %rdx
-    movq $6, %rcx
+    movq $13, %rdx
+    movq $26, %rcx
     call draw_lines
 
     # epilogue

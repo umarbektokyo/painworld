@@ -7,6 +7,7 @@
     #   while !quit_flag:
     #       poll_input()
     #       erase()
+    #       if the terminal is smaller than COLS x ROWS: show a message, skip
     #       switch game_state:
     #         SCENE_GAME: update_physics(); draw_game()
     #         SCENE_END:  draw_end()
@@ -21,10 +22,19 @@
     .text
     .globl main
 
+utf8_locale: .asciz "C.UTF-8"
+too_small_text: .asciz "Make the terminal bigger: painworld needs %d x %d (x quits)"
+
 main:
     # prologue
     pushq %rbp
     movq  %rsp, %rbp
+
+    # setlocale(LC_ALL, "C.UTF-8"): let ncursesw print UTF-8 (the title).
+    # Must happen before initscr().
+    movq $LC_ALL, %rdi
+    movq $utf8_locale, %rsi
+    call setlocale
 
     #-----------------------------------------------------------------------------
     # ncurses setup
@@ -86,6 +96,16 @@ main:
 
     call erase                  # clear the screen buffer
 
+    # Terminal too small? Ask for a bigger one and pause everything.
+    movq stdscr, %rdi
+    call getmaxy                # eax = terminal height
+    cmpl $ROWS, %eax
+    jl   .too_small
+    movq stdscr, %rdi
+    call getmaxx                # eax = terminal width
+    cmpl $COLS, %eax
+    jl   .too_small
+
     # Scene dispatch based on game_state
     cmpq $SCENE_GAME, game_state
     je   .scene_game
@@ -96,6 +116,17 @@ main:
     cmpq $SCENE_CREDITS, game_state
     je   .scene_credits
     call draw_home              # SCENE_HOME (see screens/home.s)
+    jmp  .frame_end
+
+.too_small:
+    # mvprintw(0, 0, too_small_text, COLS, ROWS)
+    movq $0, %rdi
+    movq $0, %rsi
+    movq $too_small_text, %rdx
+    movq $COLS, %rcx
+    movq $ROWS, %r8
+    movq $0, %rax
+    call mvprintw
     jmp  .frame_end
 
 .scene_guide:

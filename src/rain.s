@@ -106,8 +106,11 @@ spawn_drop:
     #-----------------------------------------------------------------------------
     # void update_rain(void)
     #
-    #   1. every RAIN_RAMP_FRAMES frames: rain_level++ (up to RAIN_MAX)
-    #   2. RAIN_TRIES times: if rand() % 100 < rain_level: spawn_drop()
+    #   1. every RAIN_RAMP_FRAMES frames:
+    #          rain_level += rain_level / RAIN_GROWTH + 1   (up to RAIN_MAX)
+    #      Growing by a fraction of itself means the more it rains, the faster
+    #      it gets worse: a drizzle at first, pouring after ~2 minutes.
+    #   2. RAIN_TRIES times: if rand() % 1000 < rain_level: spawn_drop()
     #   3. for each falling drop:
     #          y += RAIN_SPEED;  c = x / 16
     #          if y >= FLOOR_TOP - water_level:        (reached floor / water)
@@ -134,9 +137,17 @@ update_rain:
     cmpq $RAIN_RAMP_FRAMES, rain_clock
     jl   .ur_spawn
     movq $0, rain_clock
-    cmpq $RAIN_MAX, rain_level
-    jge  .ur_spawn
-    incq rain_level
+    movq rain_level, %rax
+    movq $0, %rdx
+    movq $RAIN_GROWTH, %rcx
+    divq %rcx                   # rax = rain_level / RAIN_GROWTH
+    incq %rax                   # ... + 1
+    addq rain_level, %rax       # rax = new rain_level
+    cmpq $RAIN_MAX, %rax
+    jle  .ur_level_ok
+    movq $RAIN_MAX, %rax        # cap it
+.ur_level_ok:
+    movq %rax, rain_level
 
     #-----------------------------------------------------------------------------
     # 2. new drops
@@ -147,12 +158,12 @@ update_rain:
     cmpq $RAIN_TRIES, %r12
     jge  .ur_move
 
-    call rand                   # rdx = rand() % 100
+    call rand                   # rdx = rand() % 1000
     movl %eax, %eax
     movq $0, %rdx
-    movq $100, %rcx
+    movq $1000, %rcx
     divq %rcx
-    cmpq rain_level, %rdx       # rain_level % chance
+    cmpq rain_level, %rdx       # rain_level out of 1000 chance
     jge  .ur_spawn_next
     call spawn_drop
 

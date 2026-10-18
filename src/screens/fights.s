@@ -431,13 +431,18 @@ draw_game:
     call draw_rain              # see rain.s
     call draw_spears            # see spears.s
 
-    # mvprintw(0, 0, hud_text, kills[0], kills[1], rain_level)
+    # mvprintw(0, 0, hud_text, kills[0], kills[1], rain_level / 10)
+    movq rain_level, %rax       # per mille -> percent
+    movq $0, %rdx
+    movq $10, %rcx
+    divq %rcx
+    movq %rax, %r9              # third  %ld: how hard it rains (%)
+
     movq $0, %rdi               # row
     movq $0, %rsi               # column
     movq $hud_text, %rdx        # format string
     movq kills, %rcx            # first  %ld: kills[0] (P1)
     movq kills+8, %r8           # second %ld: kills[1] (P2), 8 bytes further
-    movq rain_level, %r9        # third  %ld: how hard it rains
     movq $0, %rax               # no float arguments (like printf)
     call mvprintw
 

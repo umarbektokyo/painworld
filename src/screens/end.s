@@ -29,9 +29,9 @@ draw_end:
     cmpq $0, winner             # winner -1 = nobody (both drowned)
     jl   .end_draw
 
-    # mvprintw(9, 31, end_title, winner + 1)
-    movq $9, %rdi
-    movq $31, %rsi
+    # mvprintw(15, 51, end_title, winner + 1)
+    movq $15, %rdi
+    movq $51, %rsi
     movq $end_title, %rdx
     movq winner, %rcx
     incq %rcx                   # player 0 -> "P1"
@@ -40,26 +40,26 @@ draw_end:
     jmp  .end_score
 
 .end_draw:
-    # mvprintw(9, 29, end_draw)
-    movq $9, %rdi
-    movq $29, %rsi
+    # mvprintw(15, 49, end_draw)
+    movq $15, %rdi
+    movq $49, %rsi
     movq $end_draw, %rdx
     movq $0, %rax
     call mvprintw
 
 .end_score:
-    # mvprintw(11, 27, end_kills, kills[0], kills[1])
-    movq $11, %rdi
-    movq $27, %rsi
+    # mvprintw(17, 47, end_kills, kills[0], kills[1])
+    movq $17, %rdi
+    movq $47, %rsi
     movq $end_kills, %rdx
     movq kills, %rcx
     movq kills+8, %r8
     movq $0, %rax
     call mvprintw
 
-    # mvprintw(13, 25, end_help)
-    movq $13, %rdi
-    movq $25, %rsi
+    # mvprintw(19, 45, end_help)
+    movq $19, %rdi
+    movq $45, %rsi
     movq $end_help, %rdx
     movq $0, %rax
     call mvprintw

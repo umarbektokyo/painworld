@@ -3,7 +3,7 @@
 # painworld -- build
 #
 # Assembles every src/**/*.s (except src/experiments/) into build/ and links
-# them with ncurses. Runs inside the Docker container (linux/amd64).
+# them with ncursesw. Runs inside the Docker container (linux/amd64).
 #
 # Usage (inside the container):
 #   make        # build ./rain
@@ -13,7 +13,7 @@
 
 CC      = gcc
 ASFLAGS = -no-pie -g -Isrc          # -Isrc lets .include "constants.inc" work
-LDLIBS  = -lncurses -ltinfo
+LDLIBS  = -lncursesw -ltinfo         # ncursesw = ncurses with UTF-8 support
 SRC     = $(shell find src -name '*.s' -not -path 'src/experiments/*')
 OBJ     = $(patsubst src/%.s,build/%.o,$(SRC))
 BIN     = rain

@@ -37,18 +37,18 @@ draw_credits:
     pushq %rbp
     movq  %rsp, %rbp
 
-    # draw_lines(credits_title, CREDITS_TITLE_COUNT, 2, 27)
+    # draw_lines(credits_title, CREDITS_TITLE_COUNT, 8, 47)
     movq $credits_title, %rdi
     movq $CREDITS_TITLE_COUNT, %rsi
-    movq $2, %rdx
-    movq $27, %rcx
+    movq $8, %rdx
+    movq $47, %rcx
     call draw_lines
 
-    # draw_lines(credits_text, CREDITS_TEXT_COUNT, 8, 22)
+    # draw_lines(credits_text, CREDITS_TEXT_COUNT, 14, 42)
     movq $credits_text, %rdi
     movq $CREDITS_TEXT_COUNT, %rsi
-    movq $8, %rdx
-    movq $22, %rcx
+    movq $14, %rdx
+    movq $42, %rcx
     call draw_lines
 
     # epilogue

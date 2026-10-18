@@ -33,7 +33,7 @@ chunk_vy:   .quad     0,       0,       0,       0   # velocity y
 chunk_r:    .quad    42,      35,      42,      35   # radius (head is bigger)
 
     # Where each round starts (copied into chunk_x / chunk_y by reset_round)
-start_x:    .quad   240,     160,    1040,    1120
+start_x:    .quad   400,     320,    1520,    1600
 start_y:    .quad   160,     160,     160,     160   # high up, they fall in
 
     # Jump kick per part. Index = part (0 = head, 1 = body).
@@ -71,19 +71,20 @@ drop_active: .skip MAX_DROPS * 8    # 1 = this drop is falling
 water_total: .quad 0                # all the water that stayed, added up
 water_level: .quad 0                # water_total / COLS: height above the floor
 splash:      .skip COLS * 8         # frames left of a splash, per column
-rain_level:  .quad RAIN_START       # spawn chance (%), grows over time
+rain_level:  .quad RAIN_START       # spawn chance (per mille), grows over time
 rain_clock:  .quad 0                # frames since rain_level last grew
 drowned:     .quad 0, 0             # per player: 1 = head is under water
 
     #-----------------------------------------------------------------------------
     # Platforms: rectangles from (x0, y0) top-left to (x1, y1) bottom-right.
     # You can jump up through them and land on their top edge.
-    #                floor  left   right  middle
+    # Each step up is 6 rows (192 subunits): one jump high.
+    #                floor  low-L  low-R  middle high-L high-R
     #-----------------------------------------------------------------------------
-plat_x0:    .quad     0,   128,   832,   480
-plat_y0:    .quad   704,   512,   512,   320
-plat_x1:    .quad  1280,   448,  1152,   800
-plat_y1:    .quad   768,   544,   544,   352
+plat_x0:    .quad     0,   160,  1312,   720,   288,  1280
+plat_y0:    .quad  1088,   896,   896,   704,   512,   512
+plat_x1:    .quad  1920,   608,  1760,  1200,   640,  1632
+plat_y1:    .quad  1152,   928,   928,   736,   544,   544
 
     #-----------------------------------------------------------------------------
     # Game flow
