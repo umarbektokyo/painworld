@@ -1,4 +1,3 @@
-# data.s - all the game state lives here
 # every array entry is 8 bytes, read like: movq chunk_x(,%rcx,8), %rax
 
     .include "constants.inc"
@@ -25,7 +24,7 @@ chunk_vy:   .quad     0,       0,       0,       0
 chunk_r:    .quad    42,      35,      42,      35   # head is a bit bigger
 
 start_x:    .quad   400,     320,    1520,    1600   # copied in by reset_round
-start_y:    .quad   160,     160,     160,     160   # high up, they fall in
+start_y:    .quad   160,     160,     160,     160
 
 jump_kick:  .quad JUMP_HEAD, JUMP_BODY               # index = part
 
@@ -60,8 +59,7 @@ rain_level:  .quad RAIN_START       # spawn chance out of 1000, goes up
 rain_clock:  .quad 0                # frames since rain_level last went up
 drowned:     .quad 0, 0             # per player
 
-# platforms: rectangles (x0, y0) to (x1, y1). jump through from below, land on top.
-# each step up is 192 subunits (6 rows), one jump.
+# platforms: rectangles (x0, y0) to (x1, y1)
 #              floor  low-L  low-R  middle high-L high-R
 plat_x0:    .quad     0,   160,  1312,   720,   288,  1280
 plat_y0:    .quad  1088,   896,   896,   704,   512,   512
@@ -74,4 +72,5 @@ frame_count: .quad 0            # +1 every frame, the sky uses it as time
 winner:      .quad 0            # -1 = draw
 
 cell_owner:  .quad 0            # colour pair for the cell being drawn
-ramp:        .ascii " .:-=+*#%@" # brightness 0..9
+ramp:        .ascii " ::-=+*#%@" # brightness 0..9, needs exactly 10 chars
+# ramp:        .ascii " 123456789" # brightness 0..9
