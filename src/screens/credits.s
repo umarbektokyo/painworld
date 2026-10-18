@@ -1,5 +1,3 @@
-# credits.s - who made it
-
     .text
     .globl draw_credits
 
@@ -13,9 +11,9 @@ credits_title:  .quad credits_title_0, credits_title_1, credits_title_2, credits
 
 credits_text_0: .asciz "              made by"
 credits_text_1: .asciz ""
-credits_text_2: .asciz "          Deniels Kruglovs"
+credits_text_2: .asciz "       Umarbek Bakhodirjonov"
 credits_text_3: .asciz "           Viesturs Kālis"
-credits_text_4: .asciz "       Umarbek Bakhodirjonov"
+credits_text_4: .asciz "          Deniels Kruglovs"
 credits_text_5: .asciz "          Gabriel Cancinos"
 credits_text_6: .asciz ""
 credits_text_7: .asciz " inspired by Rain World (Videocult)"
@@ -31,14 +29,14 @@ draw_credits:
     pushq %rbp
     movq  %rsp, %rbp
 
-    # draw_lines(credits_title, CREDITS_TITLE_COUNT, 8, 47)
+    # draw_lines(lines: credits_title, count: CREDITS_TITLE_COUNT, row: 8, col: 47)
     movq $credits_title, %rdi
     movq $CREDITS_TITLE_COUNT, %rsi
     movq $8, %rdx
     movq $47, %rcx
     call draw_lines
 
-    # draw_lines(credits_text, CREDITS_TEXT_COUNT, 14, 42)
+    # draw_lines(lines: credits_text, count: CREDITS_TEXT_COUNT, row: 14, col: 42)
     movq $credits_text, %rdi
     movq $CREDITS_TEXT_COUNT, %rsi
     movq $14, %rdx

@@ -1,5 +1,4 @@
 # main.s - ncurses setup + the main loop
-#
 # every frame (~30 fps): read keys, clear, draw the current scene, refresh, sleep
 
     .include "constants.inc"
@@ -8,60 +7,60 @@
     .globl main
 
 utf8_locale:    .asciz "C.UTF-8"
-too_small_text: .asciz "Make the terminal bigger: painworld needs %d x %d (x quits)"
+too_small_text: .asciz "pls make the terminal bigger, painworld consumes %d x %d (x quits)"
 
 main:
     # prologue
     pushq %rbp
     movq  %rsp, %rbp
 
-    # setlocale(LC_ALL, "C.UTF-8") so the title's unicode blocks work,
-    # has to be before initscr
+    # setlocale(category: LC_ALL, locale: "C.UTF-8") so the title's unicode blocks work
     movq $LC_ALL, %rdi
     movq $utf8_locale, %rsi
     call setlocale
 
     call initscr                # ncurses takes over the terminal
     call noecho                 # don't print typed keys
-    call cbreak                 # keys come in right away, no Enter needed
+    call cbreak                 # keys come-in right away, no Enter needed
 
-    movq stdscr, %rdi           # keypad(stdscr, 1): arrows become KEY_LEFT etc
+    # keypad(window: stdscr, on: 1), arrows become KEY_LEFT etc
+    movq stdscr, %rdi
     movq $1, %rsi
     call keypad
 
-    movq $0, %rdi               # curs_set(0): hide the cursor
+    movq $0, %rdi               # curs_set(visibility: 0), hide the cursor
     call curs_set
 
-    movq $0, %rdi               # timeout(0): getch returns -1 right away if
-    call timeout                # nothing was pressed
+    movq $0, %rdi               # timeout(ms: 0), getch returns -1 right away
+    call timeout                # if nothing was pressed
 
-    movq $25, %rdi              # Esc normally takes 1 second to arrive
-    call set_escdelay
+    movq $1, %rdi               # set_escdelay(ms: 1), Esc normally takes
+    call set_escdelay           # 1 second to arrive
 
     call start_color
 
-    # colour pairs: init_pair(pair, foreground, background = 0 black)
-    movq $1, %rdi               # 1 = P1 green
+    # colour pairs: init_pair(pair: n, fg: colour, bg: 0 = black)
+    movq $1, %rdi               # init_pair(pair: 1, fg: P1_COLOR, bg: 0), P1 green
     movq $P1_COLOR, %rsi
     movq $0, %rdx
     call init_pair
 
-    movq $2, %rdi               # 2 = P2 orange
+    movq $2, %rdi               # init_pair(pair: 2, fg: P2_COLOR, bg: 0), P2 orange
     movq $P2_COLOR, %rsi
     movq $0, %rdx
     call init_pair
 
-    movq $WATER_PAIR, %rdi      # 3 = rain + water, blue
+    movq $WATER_PAIR, %rdi      # init_pair(pair: 3, fg: 4 blue, bg: 0), water
     movq $4, %rsi
     movq $0, %rdx
     call init_pair
 
-    movq $SKY_PAIR, %rdi        # 4 = clouds, grey-blue
+    movq $SKY_PAIR, %rdi        # init_pair(pair: 4, fg: SKY_COLOR, bg: 0), clouds
     movq $SKY_COLOR, %rsi
     movq $0, %rdx
     call init_pair
 
-    movq $0, %rdi               # srand(time(0)), so spears differ every run
+    movq $0, %rdi               # srand(seed: time(NULL)), new spears every run
     call time
     movq %rax, %rdi
     call srand
@@ -78,11 +77,11 @@ main:
     call erase
 
     # terminal too small -> just show a message
-    movq stdscr, %rdi
+    movq stdscr, %rdi           # getmaxy(window: stdscr)
     call getmaxy                # eax = height
     cmpl $ROWS, %eax
     jl   .too_small
-    movq stdscr, %rdi
+    movq stdscr, %rdi           # getmaxx(window: stdscr)
     call getmaxx                # eax = width
     cmpl $COLS, %eax
     jl   .too_small
@@ -100,7 +99,8 @@ main:
     jmp  .frame_end
 
 .too_small:
-    movq $0, %rdi               # mvprintw(0, 0, too_small_text, COLS, ROWS)
+    # mvprintw(row: 0, col: 0, format: too_small_text, %d: COLS, %d: ROWS)
+    movq $0, %rdi
     movq $0, %rsi
     movq $too_small_text, %rdx
     movq $COLS, %rcx
@@ -128,7 +128,7 @@ main:
 .frame_end:
     call refresh                # actually show it
 
-    movq $FRAME_US, %rdi        # usleep(33000)
+    movq $FRAME_US, %rdi        # usleep(microseconds: 33000)
     call usleep
     jmp  .game_loop
 

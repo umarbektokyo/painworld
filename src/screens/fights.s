@@ -1,4 +1,4 @@
-# fights.s - drawing the fight: world, rain, spears, then the score on top
+# drawing the fight scene: world, rain, spears, then the score on top
 
     .include "constants.inc"
 
@@ -16,7 +16,8 @@ draw_game:
     call draw_rain              # rain.s
     call draw_spears            # spears.s
 
-    movq $0, %rdi               # mvprintw(0, 56, hud_text, kills[0], kills[1])
+    # mvprintw(row: 0, col: 56, format: hud_text, %ld: kills[0], %ld: kills[1])
+    movq $0, %rdi
     movq $56, %rsi
     movq $hud_text, %rdx
     movq kills, %rcx

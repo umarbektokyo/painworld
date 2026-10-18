@@ -53,7 +53,8 @@ draw_world:
     cmpq $SUB_X, %rbx
     jge  .next_sy
 
-    # x = col * CELL_W + sx * SAMPLE_STEP + SAMPLE_OFF
+    # sample_point(x: col*CELL_W + sx*SAMPLE_STEP + SAMPLE_OFF,
+    #              y: row*CELL_H + sy*SAMPLE_STEP + SAMPLE_OFF)
     movq %r13, %rdi
     imulq $CELL_W, %rdi
     movq %rbx, %rax
@@ -84,7 +85,7 @@ draw_world:
 
     cmpq $0, %r14               # empty -> sky
     jne  .have_index
-    movq %r13, %rdi
+    movq %r13, %rdi             # sky_shade(col: col, row: row)
     movq %r12, %rsi
     call sky_shade              # sky.s, gives 0, 1 or 2
     movq %rax, %r14
@@ -96,7 +97,7 @@ draw_world:
     shlq $8, %rax               # COLOR_PAIR(n) is just n << 8
     orq  %rax, %rdx
 
-    movq %r12, %rdi             # mvaddch(row, col, ch)
+    movq %r12, %rdi             # mvaddch(row: row, col: col, ch: char | colour)
     movq %r13, %rsi
     call mvaddch
 
@@ -132,7 +133,8 @@ sample_point:
     movq $0, %r10               # brightness so far
 
     # platforms
-    call find_platform          # rax = platform or -1, rdi/rsi untouched
+    call find_platform          # find_platform(x: x, y: y), already in rdi/rsi
+                                # rax = platform or -1, rdi/rsi untouched
     cmpq $0, %rax
     jl   .sp_films
     movq $TERRAIN_SHADE, %r10

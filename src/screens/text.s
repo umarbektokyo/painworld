@@ -27,7 +27,7 @@ draw_lines:
     cmpq $0, %r12
     je   .dl_done
 
-    movq %r13, %rdi             # mvaddstr(row, col, lines[i])
+    movq %r13, %rdi             # mvaddstr(row: row, col: col, str: lines[i])
     movq %r14, %rsi
     movq (%rbx), %rdx           # string address from the table
     call mvaddstr

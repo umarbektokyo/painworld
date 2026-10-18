@@ -189,7 +189,7 @@ update_spears:
     movq $0, spear_vx(,%rbx,8)
 .us_edges_done:
 
-    movq spear_x(,%rbx,8), %rdi
+    movq spear_x(,%rbx,8), %rdi # find_platform(x: spear x, y: spear y)
     movq spear_y(,%rbx,8), %rsi
 
     cmpq $0, spear_vy(,%rbx,8)  # only sticks while falling, like the slugcats
@@ -282,7 +282,7 @@ draw_spears:
 .ds_up_loop:
     cmpq $3, %r14
     jg   .ds_next
-    movq %r12, %rdi
+    movq %r12, %rdi             # mvaddch(row: row - k, col: col, ch: '|')
     subq %r14, %rdi
     movq %r13, %rsi
     movq $'|', %rdx
@@ -295,7 +295,7 @@ draw_spears:
 .ds_flat_loop:
     cmpq $2, %r14
     jg   .ds_tip
-    movq %r12, %rdi
+    movq %r12, %rdi             # mvaddch(row: row, col: col + k, ch: '-')
     movq %r13, %rsi
     addq %r14, %rsi
     movq $'-', %rdx
@@ -307,13 +307,13 @@ draw_spears:
     movq %r12, %rdi
     cmpq $1, spear_dir(,%rbx,8)
     jne  .ds_tip_left
-    movq %r13, %rsi             # '>' at col + 2
+    movq %r13, %rsi             # mvaddch(row: row, col: col + 2, ch: '>')
     addq $2, %rsi
     movq $'>', %rdx
     call mvaddch
     jmp  .ds_next
 .ds_tip_left:
-    movq %r13, %rsi             # '<' at col - 2
+    movq %r13, %rsi             # mvaddch(row: row, col: col - 2, ch: '<')
     subq $2, %rsi
     movq $'<', %rdx
     call mvaddch

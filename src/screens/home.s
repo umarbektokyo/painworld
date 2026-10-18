@@ -36,24 +36,25 @@ draw_home:
     pushq %rbp
     movq  %rsp, %rbp
 
-    # title in P1's green: attron(COLOR_PAIR(1))
+    # attron(attrs: COLOR_PAIR(1)), title in P1's green
     movq $1, %rdi
     shlq $8, %rdi               # COLOR_PAIR(n) is just n << 8
     call attron
 
-    # draw_lines(splash, SPLASH_COUNT, 5, 8), 103 wide so centred in 120
+    # draw_lines(lines: splash, count: SPLASH_COUNT, row: 5, col: 8)
+    # (103 wide, so col 8 centres it in 120)
     movq $splash, %rdi
     movq $SPLASH_COUNT, %rsi
     movq $5, %rdx
     movq $8, %rcx
     call draw_lines
 
-    # attroff(COLOR_PAIR(1))
+    # attroff(attrs: COLOR_PAIR(1))
     movq $1, %rdi
     shlq $8, %rdi
     call attroff
 
-    # draw_lines(home_text, HOME_TEXT_COUNT, 16, 14)
+    # draw_lines(lines: home_text, count: HOME_TEXT_COUNT, row: 16, col: 14)
     movq $home_text, %rdi
     movq $HOME_TEXT_COUNT, %rsi
     movq $16, %rdx

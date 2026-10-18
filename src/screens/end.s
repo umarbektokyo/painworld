@@ -22,7 +22,7 @@ draw_end:
     cmpq $0, winner             # -1 = draw
     jl   .end_draw
 
-    # mvprintw(15, 51, end_title, winner + 1)
+    # mvprintw(row: 15, col: 51, format: end_title, %ld: winner + 1)
     movq $15, %rdi
     movq $51, %rsi
     movq $end_title, %rdx
@@ -33,7 +33,7 @@ draw_end:
     jmp  .end_score
 
 .end_draw:
-    # mvprintw(15, 49, end_draw)
+    # mvprintw(row: 15, col: 49, format: end_draw)
     movq $15, %rdi
     movq $49, %rsi
     movq $end_draw, %rdx
@@ -41,7 +41,7 @@ draw_end:
     call mvprintw
 
 .end_score:
-    # mvprintw(17, 47, end_kills, kills[0], kills[1])
+    # mvprintw(row: 17, col: 47, format: end_kills, %ld: kills[0], %ld: kills[1])
     movq $17, %rdi
     movq $47, %rsi
     movq $end_kills, %rdx
@@ -50,7 +50,7 @@ draw_end:
     movq $0, %rax
     call mvprintw
 
-    # mvprintw(19, 45, end_help)
+    # mvprintw(row: 19, col: 45, format: end_help)
     movq $19, %rdi
     movq $45, %rsi
     movq $end_help, %rdx

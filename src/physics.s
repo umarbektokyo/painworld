@@ -137,13 +137,13 @@ update_physics:
     cmpq $NUM_PLAYERS, %rbx
     jge  .players_done
 
-    movq %rbx, %rdi
+    movq %rbx, %rdi             # spine(p: player)
     call spine
 
     cmpq $0, grab_req(,%rbx,8)
     je   .no_grab
-    movq %rbx, %rdi
-    call grab_or_throw          # spears.s
+    movq %rbx, %rdi             # grab_or_throw(p: player), spears.s
+    call grab_or_throw
     movq $0, grab_req(,%rbx,8)
 .no_grab:
 
@@ -163,7 +163,7 @@ update_physics:
 .collide_loop:
     cmpq $NUM_CHUNKS, %rbx
     jge  .collide_done
-    movq %rbx, %rdi
+    movq %rbx, %rdi             # collide_chunk(i: chunk)
     call collide_chunk
     incq %rbx
     jmp  .collide_loop
@@ -212,7 +212,7 @@ spine:
     imulq %r13, %rdi
     movq %r14, %rax
     imulq %r14, %rax
-    addq %rax, %rdi             # dx*dx + dy*dy
+    addq %rax, %rdi             # isqrt(n: dx*dx + dy*dy)
     call isqrt                  # rax = d
 
     cmpq $0, %rax               # on top of each other, no direction

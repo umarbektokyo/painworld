@@ -182,7 +182,8 @@ update_rain:
     jmp  .ur_move_next
 
 .ur_check_plats:
-    call find_platform          # render.s, rax = platform or -1
+    call find_platform          # find_platform(x: drop x, y: drop y), render.s
+                                # rax = platform or -1
     cmpq $0, %rax
     jl   .ur_move_next          # still in the air
 
@@ -324,6 +325,7 @@ draw_rain:
     cmpq $0, drop_active(,%rbx,8)
     je   .dr_drop_next
 
+    # mvaddch(row: y / 32, col: x / 16, ch: ' in blue)
     movq drop_y(,%rbx,8), %rdi
     shrq $5, %rdi
     movq drop_x(,%rbx,8), %rsi
@@ -345,6 +347,7 @@ draw_rain:
     cmpq $0, splash(,%rbx,8)
     jle  .dr_splash_next
 
+    # mvaddch(row: SPLASH_ROW, col: column, ch: . in blue)
     movq $SPLASH_ROW, %rdi
     movq %rbx, %rsi
     movq $WATER_PAIR, %rdx

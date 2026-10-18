@@ -36,14 +36,14 @@ draw_guide:
     pushq %rbp
     movq  %rsp, %rbp
 
-    # draw_lines(guide_title, GUIDE_TITLE_COUNT, 7, 49)
+    # draw_lines(lines: guide_title, count: GUIDE_TITLE_COUNT, row: 7, col: 49)
     movq $guide_title, %rdi
     movq $GUIDE_TITLE_COUNT, %rsi
     movq $7, %rdx
     movq $49, %rcx
     call draw_lines
 
-    # draw_lines(guide_text, GUIDE_TEXT_COUNT, 13, 26)
+    # draw_lines(lines: guide_text, count: GUIDE_TEXT_COUNT, row: 13, col: 26)
     movq $guide_text, %rdi
     movq $GUIDE_TEXT_COUNT, %rsi
     movq $13, %rdx
