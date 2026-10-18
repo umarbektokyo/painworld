@@ -1,5 +1,3 @@
-# guide.s - how to play
-
     .text
     .globl draw_guide
 
@@ -22,9 +20,9 @@ guide_text_6: .asciz "spear   q                    ."
 guide_text_7: .asciz ""
 guide_text_8: .asciz "SPEARS  Walk onto a spear and press your spear key to pick it up."
 guide_text_9: .asciz "        Press it again to throw it the way you are facing."
-guide_text_10: .asciz "RAIN    Drops on dry floor vanish, but rain landing on rain stays."
-guide_text_11: .asciz "        It rains harder and harder. Head under water = drowned."
-guide_text_12: .asciz "        Both drown at the same time = draw."
+guide_text_10: .asciz "RAIN    Drops on dry floor vanishes first, yet accumulates with time;"
+guide_text_11: .asciz "        It rains harder and harder, as the game goes further..."
+guide_text_12: .asciz "        To secure your survival, you must 'unsecure' one of your enemy."
 guide_text_13: .asciz ""
 guide_text_14: .asciz "                       Enter: back to menu"
 
