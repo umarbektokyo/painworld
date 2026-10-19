@@ -263,7 +263,6 @@ update_rain:
     popq %rbp
     ret
 
-# this is as far as I got today, I will continue tommorow, goodnight :)
 
 # void check_drowning(void)
 # head below the water surface = drowned. one drowns -> the other wins,
@@ -273,49 +272,49 @@ check_drowning:
     pushq %rbp
     movq  %rsp, %rbp
 
-    cmpq $SCENE_END, game_state # a spear already won this frame?
-    je   .cd_done               #   then don't overwrite the winner
+    cmpq $SCENE_END, game_state             # check if the scene has ended already, if so, then jump to .cd_done
+    je   .cd_done                           
 
     movq $FLOOR_TOP, %r8
-    subq water_level, %r8       # surface
+    subq water_level, %r8                   # get the water surface (water level - top of the floor)
 
-    movq $0, %rcx               # player
+    movq $0, %rcx                           # start checking the players starting from player 0
 
 .cd_loop:
-    cmpq $NUM_PLAYERS, %rcx     # done both players?
+    cmpq $NUM_PLAYERS, %rcx                 # have both players been checked? if so, jump to .cd_decide
     jge  .cd_decide
-    movq $0, drowned(,%rcx,8)   # assume fine
+    movq $0, drowned(,%rcx,8)               # assume the player hasn't drowned
     movq %rcx, %rax
-    shlq $1, %rax               # head chunk
-    cmpq %r8, chunk_y(,%rax,8)  # head below the surface? (y grows downwards)
-    jle  .cd_next               # head above water
-    movq $1, drowned(,%rcx,8)   # under water -> drowned
+    shlq $1, %rax                           # focus on the head chunk
+    cmpq %r8, chunk_y(,%rax,8)              # is the head bellow the water surface? if not, jump to .cd_next
+    jle  .cd_next               
+    movq $1, drowned(,%rcx,8)               # if it is, raise the amount of drowned players by one
 
 .cd_next:
-    incq %rcx                   # next player
+    incq %rcx                               # next player
     jmp  .cd_loop
 
 .cd_decide:
     movq drowned, %rax
-    addq drowned+8, %rax        # how many drowned
-    cmpq $0, %rax               # nobody?
-    je   .cd_done               #   keep playing
-    movq $SCENE_END, game_state # somebody did -> round over
-    cmpq $2, %rax               # both at once?
+    addq drowned+8, %rax                    # check how many players have drowned
+    cmpq $0, %rax                           # if no players have drowned, jump to .cd_done
+    je   .cd_done               
+    movq $SCENE_END, game_state             # but if someone did, then this stage is over
+    cmpq $2, %rax                           # and if both have drowned, then it's a draw (jump to .cd_draw)
     je   .cd_draw
 
-    movq $1, winner             # P1 drowned -> P2 wins
-    cmpq $1, drowned
+    movq $1, winner                         # there is one winner
+    cmpq $1, drowned                        # if there was also one drowned, then change the score (.cd_score)
     je   .cd_score
-    movq $0, winner             # otherwise P1 wins
+    movq $0, winner                         # otherwise, this player didn't win
 
 .cd_score:
     movq winner, %rax
-    incq kills(,%rax,8)         # winner gets a point
+    incq kills(,%rax,8)                     # winner gets a point
     jmp  .cd_done
 
 .cd_draw:
-    movq $-1, winner            # -1 = draw, nobody gets a point
+    movq $-1, winner                        # there is -1 winners, so it's a draw and nobody gets a point
 
 .cd_done:
     # epilogue
@@ -332,50 +331,50 @@ draw_rain:
     movq  %rsp, %rbp
 
     # callee-conventions
-    pushq %rbx                  # drop / column, survives mvaddch
-    subq  $8, %rsp              # stack aligned for mvaddch
+    pushq %rbx                              # drop / column, survives mvaddch
+    subq  $8, %rsp                          # stack aligned for mvaddch
 
-    movq $0, %rbx               # drop i = 0
+    movq $0, %rbx                           # initialize amount of drops at 0
 
 .dr_drop_loop:
-    cmpq $MAX_DROPS, %rbx       # done all slots?
+    cmpq $MAX_DROPS, %rbx                   # have all possible drops fallen? then jump to .dr_splashes
     jge  .dr_splashes
-    cmpq $0, drop_active(,%rbx,8) # empty slot?
-    je   .dr_drop_next          #   nothing to draw
+    cmpq $0, drop_active(,%rbx,8)           # are you on an empty drop slot? then there's nothing to draw
+    je   .dr_drop_next                      
 
     # mvaddch(row: y / 32, col: x / 16, ch: ' in blue)
     movq drop_y(,%rbx,8), %rdi
-    shrq $5, %rdi               # row = y / 32 (a cell is 32 tall)
+    shrq $5, %rdi                           # divide the y coordinate of the drop by 32 (a cell is only 32 bits tall)
     movq drop_x(,%rbx,8), %rsi
-    shrq $4, %rsi               # col = x / 16 (a cell is 16 wide)
-    movq $WATER_PAIR, %rdx
-    shlq $8, %rdx               # COLOR_PAIR(WATER_PAIR)
-    orq  $39, %rdx              # 39 = '
-    call mvaddch
+    shrq $4, %rsi                           # divide the x coordinate of the drop by 16 (a cell is only 16 bits wide)
+    movq $WATER_PAIR, %rdx                  # make the drops blue
+    shlq $8, %rdx                           # COLOR_PAIR(WATER_PAIR)
+    orq  $39, %rdx                          # bitwise or between 39 and the value in rdc
+    call mvaddch                            # add the drop
 
 .dr_drop_next:
-    incq %rbx                   # next drop
+    incq %rbx                               # next drop
     jmp  .dr_drop_loop
 
 .dr_splashes:
-    movq $0, %rbx               # column
+    movq $0, %rbx                           # initialize columns at 0
 
 .dr_splash_loop:
-    cmpq $COLS, %rbx            # done all columns?
+    cmpq $COLS, %rbx                        # if all columns have been checked, jump to .dr_done
     jge  .dr_done
-    cmpq $0, splash(,%rbx,8)    # splash in this column?
-    jle  .dr_splash_next        #   no -> nothing to draw
+    cmpq $0, splash(,%rbx,8)                # is there a splash in this column? if not, then jump to .dr_splash_next
+    jle  .dr_splash_next       
 
     # mvaddch(row: SPLASH_ROW, col: column, ch: . in blue)
-    movq $SPLASH_ROW, %rdi      # the row just above the floor
-    movq %rbx, %rsi             # this column
-    movq $WATER_PAIR, %rdx
-    shlq $8, %rdx               # blue
-    orq  $'.', %rdx             # + the '.' character
+    movq $SPLASH_ROW, %rdi                  # have the row and column stored in rdi and rsi respectively
+    movq %rbx, %rsi             
+    movq $WATER_PAIR, %rdx                  # move the order to make a pair of drops
+    shlq $8, %rdx                           # make the drop blue
+    orq  $'.', %rdx                         # print the '.' character (raindrop)
     call mvaddch
 
 .dr_splash_next:
-    incq %rbx                   # next column
+    incq %rbx                               # next column
     jmp  .dr_splash_loop
 
 .dr_done:
