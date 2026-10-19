@@ -114,7 +114,7 @@ grab_or_throw:
     negq %rax
 .gt_abs_y:
     cmpq $GRAB_RANGE_Y, %rax                    
-    jge  .gt_next
+    jg  .gt_next
 
     movq $SPEAR_HELD, spear_state(,%rcx,8)      # you're close enough to a spear, so it gets picked up
     movq %rdi, spear_owner(,%rcx,8)             # we now hold a spear
