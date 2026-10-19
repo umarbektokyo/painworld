@@ -21,40 +21,39 @@ reset_rain:
     pushq %rbp
     movq  %rsp, %rbp
 
-    movq $0, %rcx               # drop i = 0 (rcx is fine, nothing is called)
-
+    movq $0, %rcx                           # amount of drops is 0
 .rr_drop_loop:
-    cmpq $MAX_DROPS, %rcx       # done all 1024 drop slots?
+    cmpq $MAX_DROPS, %rcx                   # compare all possible drops to the current amount of drops, if greater or equal, then jump to .rr_drops_done
     jge  .rr_drops_done
-    movq $0, drop_active(,%rcx,8) # slot is free, nothing falling
-    incq %rcx                   # next slot
+    movq $0, drop_active(,%rcx,8)           # empty the free rain slot
+    incq %rcx                               # go to the next slot
     jmp  .rr_drop_loop
 
 .rr_drops_done:
-    movq $0, %rcx               # column = 0
+    movq $0, %rcx                           # start at column 0
 
 .rr_col_loop:
-    cmpq $COLS, %rcx            # done all 120 columns?
+    cmpq $COLS, %rcx                        # if all available columns are done, jump to .rr_cols_done
     jge  .rr_cols_done
-    movq $0, splash(,%rcx,8)    # no splash in this column
-    incq %rcx                   # next column
+    movq $0, splash(,%rcx,8)                # there is no splash in this column
+    incq %rcx                               # jump to the next column
     jmp  .rr_col_loop
 
 .rr_cols_done:
-    movq $0, %rcx               # platform = 0
+    movq $0, %rcx                           # start at platform 0
 
 .rr_plat_loop:
-    cmpq $NUM_PLATS, %rcx       # done all 6 platforms?
+    cmpq $NUM_PLATS, %rcx                   # have all available platforms been checked? jump to .rr_plats_done
     jge  .rr_plats_done
-    movq $0, plat_wet(,%rcx,8)  # platform top is dry
-    incq %rcx                   # next platform
+    movq $0, plat_wet(,%rcx,8)              # platform is still dry
+    incq %rcx                               # jump to the next platform
     jmp  .rr_plat_loop
 
 .rr_plats_done:
-    movq $0, water_total        # no water at all
-    movq $0, water_level        # lake height = 0
-    movq $RAIN_START, rain_level # light drizzle again (8 out of 1000)
-    movq $0, rain_clock         # start counting to the next "heavier" step
+    movq $0, water_total                    # total of water is 0
+    movq $0, water_level                    # the water level is 0
+    movq $RAIN_START, rain_level            # start again a light drizzle
+    movq $0, rain_clock                     # start the clock for the rain
 
     # epilogue
     movq %rbp, %rsp
@@ -68,28 +67,28 @@ spawn_drop:
     movq  %rsp, %rbp
 
     # callee-conventions
-    pushq %rbx                  # drop
-    subq  $8, %rsp              # stack aligned for rand
+    pushq %rbx                              # drop
+    subq  $8, %rsp                          # stack aligned for rand
 
-    movq $0, %rbx               # look from slot 0
+    movq $0, %rbx                           # begin looking at drop slot 0
 
 .sd_find:
-    cmpq $MAX_DROPS, %rbx       # looked at every slot?
-    jge  .sd_done               # all busy, skip
-    cmpq $0, drop_active(,%rbx,8) # is this slot free?
-    je   .sd_found              #   yes -> use it
-    incq %rbx                   #   no -> try the next one
+    cmpq $MAX_DROPS, %rbx                   # if all drop slots have been handled, jump to .sd_done
+    jge  .sd_done            
+    cmpq $0, drop_active(,%rbx,8)           # is the current slot free? if so, then go use it to start a drop
+    je   .sd_found       
+    incq %rbx                               # if the slot is taken, jump to the next slot
     jmp  .sd_find
 
 .sd_found:
-    call rand                   # x = rand() % WORLD_W
-    movl %eax, %eax             # rand gives an int, clear the top half of rax
-    movq $0, %rdx               # divq divides rdx:rax, so rdx must be 0
-    movq $WORLD_W, %rcx         # divide by the world width (1920)
-    divq %rcx                   # remainder in rdx = random x on the screen
-    movq %rdx, drop_x(,%rbx,8)  # x = that
-    movq $0, drop_y(,%rbx,8)    # y = 0, the very top
-    movq $1, drop_active(,%rbx,8) # now it's falling
+    call rand                               # generate a random int
+    movl %eax, %eax                         # put the random number in rdx
+    movq $0, %rdx               
+    movq $WORLD_W, %rcx         
+    divq %rcx                   
+    movq %rdx, drop_x(,%rbx,8)              # move the random value to the x coordinate of the drop
+    movq $0, drop_y(,%rbx,8)                # move the drop to the top of the screen
+    movq $1, drop_active(,%rbx,8)           # make the drop start falling
 
 .sd_done:
     # epilogue
@@ -111,151 +110,151 @@ update_rain:
     movq  %rsp, %rbp
 
     # callee-conventions
-    pushq %rbx                  # drop
-    pushq %r12                  # spawn attempt
+    pushq %rbx                              # drop
+    pushq %r12                              # spawn attempt
 
     # 1. heavier rain
-    incq rain_clock             # one more frame since the last step up
-    cmpq $RAIN_RAMP_FRAMES, rain_clock # 30 frames = 1 second yet?
-    jl   .ur_spawn              #   not yet -> skip
-    movq $0, rain_clock         # start counting again
-    movq rain_level, %rax       # rax = rain_level / 32 + 1
-    movq $0, %rdx               # (rdx = 0 before divq, like in spawn_drop)
+    incq rain_clock                         # increase the rain clock by one
+    cmpq $RAIN_RAMP_FRAMES, rain_clock      # compare the rain clock with one second
+    jl   .ur_spawn                          # if less than one second has happened, jump to .ur_spawn
+    movq $0, rain_clock                     # start the rain clock again
+    movq rain_level, %rax                   # move the rain level into rax
+    movq $0, %rdx               
     movq $RAIN_GROWTH, %rcx
-    divq %rcx                   # rain_level / 32
-    incq %rax                   # + 1, so it still grows when it's small
-    addq rain_level, %rax       # new level: about 3% more every second
-    cmpq $RAIN_MAX, %rax        # more than 1000?
+    divq %rcx                               # divide the rain growth by the rain level
+    incq %rax                               # + 1 so the amount of rain still grows
+    addq rain_level, %rax                   # one more rain level, so aroung 3% more rain
+    cmpq $RAIN_MAX, %rax                    # are we at the max rain level? if not, jump to .ur_level_ok
     jle  .ur_level_ok
-    movq $RAIN_MAX, %rax        #   cap it at 1000 (16 drops per frame)
+    movq $RAIN_MAX, %rax                    # cap the rain level at 1000
 
 .ur_level_ok:
-    movq %rax, rain_level
+    movq %rax, rain_level                   # set the rain level increments at the current rain levels
 
     # 2. new drops
 .ur_spawn:
-    movq $0, %r12               # attempt = 0
+    movq $0, %r12                           # initiate attempts at 0
 
 .ur_spawn_loop:
-    cmpq $RAIN_TRIES, %r12      # done 16 attempts?
+    cmpq $RAIN_TRIES, %r12                  # have more or equal to 16 attempts happened? jump to .ur_move
     jge  .ur_move
 
-    call rand                   # rand() % 1000 < rain_level ?
-    movl %eax, %eax             # clear the top half of rax
+    call rand                               # create a random number in rdx
+    movl %eax, %eax            
     movq $0, %rdx
-    movq $1000, %rcx
-    divq %rcx                   # rdx = random number 0..999
-    cmpq rain_level, %rdx       # smaller than rain_level?
-    jge  .ur_spawn_next         #   no -> no drop this time
-    call spawn_drop             #   yes -> a new drop at the top
+    movq $1000, %rcx                        # set the value of rcx at 1000
+    divq %rcx                               
+    cmpq rain_level, %rdx                   # is the random number greater or equal to the rain level? then jump to .ur_spawn_next
+    jge  .ur_spawn_next         
+    call spawn_drop                         # if it isn't, create a new drop
 
 .ur_spawn_next:
-    incq %r12                   # next attempt
+    incq %r12                               # next attempt
     jmp  .ur_spawn_loop
 
     # 3. falling drops
 .ur_move:
-    movq $0, %rbx               # drop i = 0
+    movq $0, %rbx                           # initiate the drop at 0
 
 .ur_move_loop:
-    cmpq $MAX_DROPS, %rbx       # done all slots?
+    cmpq $MAX_DROPS, %rbx                   # if the drops are greater or equal than the max amount of drops, jump to .ur_splash
     jge  .ur_splash
 
-    cmpq $0, drop_active(,%rbx,8) # empty slot?
-    je   .ur_move_next          #   skip it
+    cmpq $0, drop_active(,%rbx,8)           # if the slot is empty, skip it
+    je   .ur_move_next          
 
-    addq $RAIN_SPEED, drop_y(,%rbx,8) # fall 24 down (rain falls at a constant speed)
-    movq drop_x(,%rbx,8), %rdi  # rdi, rsi = where the drop is now
+    addq $RAIN_SPEED, drop_y(,%rbx,8)       # add the speed of the rain to the y coordinate of the drop
+    movq drop_x(,%rbx,8), %rdi              # rdi and rsi represent the x and y coordinates of the drop respectively
     movq drop_y(,%rbx,8), %rsi
 
-    movq $FLOOR_TOP, %rax       # reached the lake / floor?
-    subq water_level, %rax      # rax = water surface (the floor, minus the water)
-    cmpq %rax, %rsi
-    jl   .ur_check_plats        # still above it -> maybe it hit a platform
+    movq $FLOOR_TOP, %rax                   # subtract the top of the floor from the water level to get the water surface
+    subq water_level, %rax     
+    cmpq %rax, %rsi                         # if the drop falls under the water surface, jump to .ur_check_plats
+    jl   .ur_check_plats        
 
-    movq $0, drop_active(,%rbx,8) # it landed, this drop is done
+    movq $0, drop_active(,%rbx,8)           # the drop landed so it is already done
     movq %rdi, %rcx
-    shrq $4, %rcx               # column = x / 16
-    cmpq $0, water_total        # already water, or a splash here -> it stays
+    shrq $4, %rcx                           # divide the column of the drop by 16
+    cmpq $0, water_total                    # if the water total is greater than 0, then jump to .ur_add_water
     jg   .ur_add_water
-    cmpq $0, splash(,%rcx,8)    # a splash still in this column? (rain on rain)
+    cmpq $0, splash(,%rcx,8)                # if a splash is still in this column, jump to .ur_add_water as well
     jg   .ur_add_water
-    movq $SPLASH_FRAMES, splash(,%rcx,8) # dry floor, just a splash
-    jmp  .ur_move_next          # (gone again in 30 frames)
+    movq $SPLASH_FRAMES, splash(,%rcx,8)    # if the code got here, the floor is dry, so it just splashes
+    jmp  .ur_move_next                      # splash is gone in 30 frames
 
 .ur_add_water:
-    addq $DROP_WATER, water_total # this drop stays, the lake gets 8 bigger
-    movq $0, splash(,%rcx,8)    # the splash is part of the water now
-    jmp  .ur_move_next
+    addq $DROP_WATER, water_total           # the drop stays and the lake gets bigger
+    movq $0, splash(,%rcx,8)                # the splash just becomes part of the lake now
+    jmp  .ur_move_next                      # move to the next drop
 
 .ur_check_plats:
-    call find_platform          # find_platform(x: drop x, y: drop y), render.s
-                                # rax = platform or -1
+    call find_platform                      # call the find_platform function from render.s
+                                            # rax is either the platform or -1 if no platform
     cmpq $0, %rax
-    jl   .ur_move_next          # still in the air
+    jl   .ur_move_next                      # if there is no platform yet, the drop is still in the air
 
-    addq $WET_PER_DROP, plat_wet(,%rax,8) # platform gets wetter
-    cmpq $WET_MAX, plat_wet(,%rax,8) # more than 128?
+    addq $WET_PER_DROP, plat_wet(,%rax,8)   # the platform gets wetter
+    cmpq $WET_MAX, plat_wet(,%rax,8)        # if the platform is still not as wet as can be, move to .ur_wet_ok
     jle  .ur_wet_ok
-    movq $WET_MAX, plat_wet(,%rax,8) #   cap it (render.s draws a 16 tall film max)
+    movq $WET_MAX, plat_wet(,%rax,8)        # if it is greater than the max wetness of the platform, keep it at the cap
 
 .ur_wet_ok:
 
     # drip off the nearer edge, so the water still ends up in the lake
     movq plat_x0(,%rax,8), %rcx
     addq plat_x1(,%rax,8), %rcx
-    shrq $1, %rcx               # middle of the platform = (x0 + x1) / 2
-    cmpq %rcx, %rdi             # drop right of the middle?
-    jge  .ur_drip_right         #   -> drips off the right edge
+    shrq $1, %rcx                           # get the middle of the drop (furthest minus closest edge of the platform halved)
+    cmpq %rcx, %rdi                         # is the drop right of the middle? call .ur_drip_right
+    jge  .ur_drip_right                     
     movq plat_x0(,%rax,8), %rcx
-    decq %rcx                   # just left of it
-    movq %rcx, drop_x(,%rbx,8)  # it keeps falling from there next frame
+    decq %rcx                               # make the drop just left of the center
+    movq %rcx, drop_x(,%rbx,8)              # keeps falling from there
     jmp  .ur_move_next
 
 .ur_drip_right:
-    movq plat_x1(,%rax,8), %rcx # just right of it (x1 is already outside)
-    movq %rcx, drop_x(,%rbx,8)
+    movq plat_x1(,%rax,8), %rcx             # drop is just right of the platform
+    movq %rcx, drop_x(,%rbx,8)              # drop keeps falling from there
 
 .ur_move_next:
-    incq %rbx                   # next drop
+    incq %rbx                               # next drop
     jmp  .ur_move_loop
 
     # 4. drying
 .ur_splash:
-    movq $0, %rcx               # column = 0
+    movq $0, %rcx                           # initialize the column at 0
 
 .ur_splash_loop:
-    cmpq $COLS, %rcx            # done all columns?
+    cmpq $COLS, %rcx                        # if all columns have been checked, jump to .ur_drain
     jge  .ur_drain
-    cmpq $0, splash(,%rcx,8)    # splash here?
+    cmpq $0, splash(,%rcx,8)                # is there a splash here? if not, jump to the next splash
     jle  .ur_splash_next
-    decq splash(,%rcx,8)        # one frame closer to disappearing
+    decq splash(,%rcx,8)                    # bring the splash one frame closer to disappearing
 
 .ur_splash_next:
-    incq %rcx                   # next column
+    incq %rcx                               # next column
     jmp  .ur_splash_loop
 
 .ur_drain:
-    movq $0, %rcx               # platform = 0
+    movq $0, %rcx                           # initialize the platform at 0
 
 .ur_drain_loop:
-    cmpq $NUM_PLATS, %rcx       # done all platforms?
+    cmpq $NUM_PLATS, %rcx                   # have all platforms been checked? If so, jump to .ur_level
     jge  .ur_level
-    cmpq $0, plat_wet(,%rcx,8)  # wet?
+    cmpq $0, plat_wet(,%rcx,8)              # is the platform wet? If not, jump to the next platform
     jle  .ur_drain_next
-    decq plat_wet(,%rcx,8)      # dries a little every frame, so it only
-                                # stays wet if the rain is heavy enough
+    decq plat_wet(,%rcx,8)                  # platform dries slowly, only stays wet if the rain is heavy enough
+
 .ur_drain_next:
-    incq %rcx                   # next platform
+    incq %rcx                               # next platform
     jmp  .ur_drain_loop
 
     # 5. flat lake
 .ur_level:
-    movq water_total, %rax      # spread all the water over the whole floor:
+    movq water_total, %rax                  # divides the water total amongst all available columns
     movq $0, %rdx
     movq $COLS, %rcx
-    divq %rcx                   # water_level = water_total / 120
-    movq %rax, water_level      # (same height everywhere, a flat lake)
+    divq %rcx                   
+    movq %rax, water_level                  # evens the heigth, all lakes have the same height
 
     # epilogue
     popq %r12
@@ -263,6 +262,8 @@ update_rain:
     movq %rbp, %rsp
     popq %rbp
     ret
+
+# this is as far as I got today, I will continue tommorow, goodnight :)
 
 # void check_drowning(void)
 # head below the water surface = drowned. one drowns -> the other wins,
