@@ -22,39 +22,39 @@ spawn_spears:
     movq  %rsp, %rbp
 
     # callee-conventions
-    pushq %rbx                  # spear
-    pushq %r12                  # platform
+    pushq %rbx                                  # amount of spears is saved in rbx
+    pushq %r12                                  # platform is saved in r12
 
-    movq $0, %rbx               # spear s = 0
+    movq $0, %rbx                               # amount of spears is set at 0
 .ss_loop:
-    cmpq $NUM_SPEARS, %rbx      # placed all 6?
+    cmpq $NUM_SPEARS, %rbx                      # if the amount of placed spears is greater or equal than. 6, jump to .ss_done (stop generating spears)
     jge  .ss_done
 
-    call rand                   # platform = rand() % NUM_PLATS
-    movl %eax, %eax             # rand gives an int, clear the top half
-    movq $0, %rdx               # divq divides rdx:rax
+    call rand                                   # call the C function rand, generates a random int
+    movl %eax, %eax                             # no-op, offers some padding
+    movq $0, %rdx                               # empty rdx to put the randomly generated number into it
     movq $NUM_PLATS, %rcx
-    divq %rcx                   # remainder in rdx
-    movq %rdx, %r12             # r12 = random platform 0..5
+    divq %rcx                                   # divide NUM_PLATS by rax and save it in rax
+    movq %rdx, %r12                             # store the random int in r12, the platform
 
-    call rand                   # x = x0 + 16 + rand() % (width - 32)
+    call rand                                   # generate another random int
     movl %eax, %eax
     movq plat_x1(,%r12,8), %rcx
-    subq plat_x0(,%r12,8), %rcx # width of the platform
-    subq $32, %rcx              # minus 16 on each side, so not right on the edge
+    subq plat_x0(,%r12,8), %rcx                 # get the width of the platform (furthest x-coordinate of the platform minus the closest x-coordinate)
+    subq $32, %rcx                              # minus 16 on each side of the platform, so it doesn't fall right on the edge
     movq $0, %rdx
-    divq %rcx                   # rdx = random 0 .. width - 33
-    addq plat_x0(,%r12,8), %rdx # + left edge
-    addq $16, %rdx              # + the 16 margin
-    movq %rdx, spear_x(,%rbx,8)
+    divq %rcx                                   # rdx = random int / width - 32
+    addq plat_x0(,%r12,8), %rdx                 # rdx + leftmost edge
+    addq $16, %rdx                              # + the 16 bit margin
+    movq %rdx, spear_x(,%rbx,8)                 # set this calculated point as the x-coordiniate of the spear
 
-    movq plat_y0(,%r12,8), %rax # y = top of the platform
-    movq %rax, spear_y(,%rbx,8)
-    movq $0, spear_vx(,%rbx,8)  # not moving
+    movq plat_y0(,%r12,8), %rax                 # move the location of the top of the platform to rax
+    movq %rax, spear_y(,%rbx,8)                 # make rax the y-coordinate of the spear
+    movq $0, spear_vx(,%rbx,8)                  # spear velocity (x and y) is 0, so it is not moving
     movq $0, spear_vy(,%rbx,8)
-    movq $SPEAR_STUCK, spear_state(,%rbx,8) # stuck in the ground, grabbable
+    movq $SPEAR_STUCK, spear_state(,%rbx,8)     # spear stuck in the ground, thus grabbable
 
-    incq %rbx                   # next spear
+    incq %rbx                                   # add one spear, and jump back to the loop
     jmp  .ss_loop
 
 .ss_done:
@@ -72,58 +72,57 @@ grab_or_throw:
     pushq %rbp
     movq  %rsp, %rbp
 
-    movq held_spear(,%rdi,8), %rcx # rcx = spear we hold, -1 = none
+    movq held_spear(,%rdi,8), %rcx              # rcx has whether we have a spear or not (-1 = no spear)
     cmpq $0, %rcx
-    jl   .gt_find               # empty hands -> try to grab one
-
+    jl   .gt_find                               # if we don't have a spear, jump to .gt_find (try to find a spear)
     # throw
-    movq $SPEAR_FLYING, spear_state(,%rcx,8)
-    movq move_dir(,%rdi,8), %rax # the way we're facing, 1 or -1
-    movq %rax, spear_dir(,%rcx,8) # tip points that way
-    imulq $SPEAR_SPEED, %rax    # vx = dir * SPEAR_SPEED
-    movq %rax, spear_vx(,%rcx,8) # 56 or -56, fast and flat
-    movq $-SPEAR_LIFT, spear_vy(,%rcx,8) # a bit upwards
-    movq $-1, held_spear(,%rdi,8) # hands empty again
-    jmp  .gt_done
+    movq $SPEAR_FLYING, spear_state(,%rcx,8)    #state of the spear is flying
+    movq move_dir(,%rdi,8), %rax                # rax has the direction we are facing (1 = front, -1 = back)
+    movq %rax, spear_dir(,%rcx,8)               # spear points towards where we are facing
+    imulq $SPEAR_SPEED, %rax                    # direction * speed = the speed of the throw, which is saved in rax and then spear_vx
+    movq %rax, spear_vx(,%rcx,8)                # speed is either 56 or -56 (depending on direction), so the spear flies fast and flat
+    movq $-SPEAR_LIFT, spear_vy(,%rcx,8)        # spear flies a bit upwards
+    movq $-1, held_spear(,%rdi,8)               # spear was thrown, so you lose the spear
+    jmp  .gt_done                               # move on
 
 .gt_find:
     movq %rdi, %r8
     shlq $1, %r8
-    incq %r8                    # body chunk = p * 2 + 1 (the body is at the feet)
+    incq %r8                                    # body chunk = p * 2 + 1 (the body is at the feet)
 
-    movq $0, %rcx               # spear s = 0
+    movq $0, %rcx                               # currently holding no spears
 .gt_loop:
-    cmpq $NUM_SPEARS, %rcx      # checked all spears?
-    jge  .gt_done               #   none close enough, nothing happens
+    cmpq $NUM_SPEARS, %rcx                      # compare the amount of available spears to the amount of spears held
+    jge  .gt_done                               # greater or equal? Then don't do anything
 
-    cmpq $SPEAR_STUCK, spear_state(,%rcx,8) # only spears in the ground
-    jne  .gt_next               # (held / flying ones can't be grabbed)
+    cmpq $SPEAR_STUCK, spear_state(,%rcx,8)     # compare the state of a spear with the value of the spear being stuck
+    jne  .gt_next                               # if it's not equal, go to the next spear and compare (flying spears cannot be grabbed)
 
-    movq spear_x(,%rcx,8), %rax # |spear x - body x| < GRAB_RANGE_X
-    subq chunk_x(,%r8,8), %rax
-    cmpq $0, %rax               # negative?
-    jge  .gt_abs_x
-    negq %rax                   #   flip it, that's the absolute value
+    movq spear_x(,%rcx,8), %rax                 # |spear x - body x| < GRAB_RANGE_X
+    subq chunk_x(,%r8,8), %rax                  # subtract the x coordinate of the spear with that of the body
+    cmpq $0, %rax                               # compare this distance with 0
+    jge  .gt_abs_x                              # if it's greater or equal to 0, jump to .gt_abs_x (see if we're whithin horizontal range)
+    negq %rax                                   # if the code got here, then the value is negative, so we flip it, taking the absolute value
 .gt_abs_x:
-    cmpq $GRAB_RANGE_X, %rax    # within 48 (3 cells) sideways?
+    cmpq $GRAB_RANGE_X, %rax                    # is the horizontal distance from the spear greater or equal than the range? Go to the next spear
     jge  .gt_next
 
-    movq spear_y(,%rcx,8), %rax # |spear y - body y| < GRAB_RANGE_Y
+    movq spear_y(,%rcx,8), %rax                 # this (from line 110 until 117) is the same we just did, but with the vertical distance
     subq chunk_y(,%r8,8), %rax
     cmpq $0, %rax
     jge  .gt_abs_y
     negq %rax
 .gt_abs_y:
-    cmpq $GRAB_RANGE_Y, %rax    # within 96 up/down? (so same platform)
+    cmpq $GRAB_RANGE_Y, %rax                    
     jge  .gt_next
 
-    movq $SPEAR_HELD, spear_state(,%rcx,8) # close enough, pick it up
-    movq %rdi, spear_owner(,%rcx,8) # it's ours now
-    movq %rcx, held_spear(,%rdi,8)  # remember which one we hold
+    movq $SPEAR_HELD, spear_state(,%rcx,8)      # you're close enough to a spear, so it gets picked up
+    movq %rdi, spear_owner(,%rcx,8)             # we now hold a spear
+    movq %rcx, held_spear(,%rdi,8)              # remember which spear we hold
     jmp  .gt_done
 
 .gt_next:
-    incq %rcx                   # next spear
+    incq %rcx                                   # next spear
     jmp  .gt_loop
 
 .gt_done:
@@ -141,105 +140,106 @@ update_spears:
     movq  %rsp, %rbp
 
     # callee-conventions
-    pushq %rbx                  # spear
-    subq  $8, %rsp              # stack aligned
+    pushq %rbx                                  # spear
+    subq  $8, %rsp                              # stack aligned
 
-    movq $0, %rbx               # spear s = 0
+    movq $0, %rbx                               # spear s = 0
 .us_loop:
-    cmpq $NUM_SPEARS, %rbx      # done all spears?
+    cmpq $NUM_SPEARS, %rbx                      # compare the amount of spears with the max amount of spears (6), if it's greater or equal then jump to .us_done(end)
     jge  .us_done
 
-    cmpq $SPEAR_HELD, spear_state(,%rbx,8)
+    cmpq $SPEAR_HELD, spear_state(,%rbx,8)      # if the spear is being held, jump to .us_held
     je   .us_held
-    cmpq $SPEAR_FLYING, spear_state(,%rbx,8)
+    cmpq $SPEAR_FLYING, spear_state(,%rbx,8)    # if the spear is flying, jump to .us_flying
     je   .us_flying
-    jmp  .us_next               # stuck, nothing to do
+    jmp  .us_next                               # otherwise (spear is stuck), move to the next spear
 
 .us_held:
-    movq spear_owner(,%rbx,8), %rax # rax = who holds it
-    movq move_dir(,%rax,8), %rcx
-    movq %rcx, spear_dir(,%rbx,8) # point where they face
-    shlq $1, %rax               # owner's head chunk
-    movq chunk_x(,%rax,8), %rcx
-    movq %rcx, spear_x(,%rbx,8) # sit on their head
+    movq spear_owner(,%rbx,8), %rax             # rax has the value of who holds the spear
+    movq move_dir(,%rax,8), %rcx                # rcx has the direction the player is facing
+    movq %rcx, spear_dir(,%rbx,8)               # spear points where player is facing
+    shlq $1, %rax                               # multiply rax by 2 (focusing on the head chunk of the player)
+    movq chunk_x(,%rax,8), %rcx                 # x and y coordinate of the spear is allocated to the coordinates of the head chunk (line 162 - 166)
+    movq %rcx, spear_x(,%rbx,8) 
     movq chunk_y(,%rax,8), %rcx
     movq %rcx, spear_y(,%rbx,8)
-    jmp  .us_next
+    jmp  .us_next                               # go to the next spear
 
 .us_flying:
-    addq $SPEAR_GRAVITY, spear_vy(,%rbx,8) # gravity 1 (slugcats get 5),
-    cmpq $SPEAR_MAX_FALL, spear_vy(,%rbx,8) # so the arc stays flat
+    addq $SPEAR_GRAVITY, spear_vy(,%rbx,8)      # add the gravity of its spear to the vertical speed
+    cmpq $SPEAR_MAX_FALL, spear_vy(,%rbx,8)     # if the max a spear can fall is less or equal than the vertical speed, jump to .us_no_cap
     jle  .us_no_cap
-    movq $SPEAR_MAX_FALL, spear_vy(,%rbx,8) # max 24, thinner than a platform
-.us_no_cap:                     # so it can't fall through one in a frame
+    movq $SPEAR_MAX_FALL, spear_vy(,%rbx,8)     # otherwise, copy the max fall to the vertical speed
+.us_no_cap:                                     # MAX_FALL is lower than the thickness of one platform so it cannot fall through
 
-    movq spear_vx(,%rbx,8), %rax # x += vx
+    movq spear_vx(,%rbx,8), %rax                # change in horizontal velocity, basically x = x + vx
     addq %rax, spear_x(,%rbx,8)
-    movq spear_vy(,%rbx,8), %rax # y += vy
+    movq spear_vy(,%rbx,8), %rax                # change in vertical velocity, basically y = y + vy
     addq %rax, spear_y(,%rbx,8)
 
-    cmpq $0, spear_x(,%rbx,8)   # hit a side: stop going sideways, just drop
+    cmpq $0, spear_x(,%rbx,8)                   # if the horizontal coordinate of the spear is greater or equal than 0, jump to .us_right
     jge  .us_right
-    movq $0, spear_x(,%rbx,8)
+    movq $0, spear_x(,%rbx,8)                   # else, the spear hit a wall so the position is 0, and the velocity is 0 (it drops)
     movq $0, spear_vx(,%rbx,8)
 .us_right:
-    cmpq $WORLD_W - 1, spear_x(,%rbx,8) # same for the right side
+    cmpq $WORLD_W - 1, spear_x(,%rbx,8)         # if the x coordinate of the spear is less or equal to the width of the screen - 1, jump to .us_edges_done
     jle  .us_edges_done
-    movq $WORLD_W - 1, spear_x(,%rbx,8)
+    movq $WORLD_W - 1, spear_x(,%rbx,8)         # else, set it to be that way, and cut the velocity
     movq $0, spear_vx(,%rbx,8)
 .us_edges_done:
 
-    movq spear_x(,%rbx,8), %rdi # find_platform(x: spear x, y: spear y)
-    movq spear_y(,%rbx,8), %rsi # (rdi/rsi are also used for the hit test below)
+    movq spear_x(,%rbx,8), %rdi                 # x and y coordinates of the spear saved in rdi and rsi respectively
+    movq spear_y(,%rbx,8), %rsi 
 
-    cmpq $0, spear_vy(,%rbx,8)  # only sticks while falling, like the slugcats
+    cmpq $0, spear_vy(,%rbx,8)                  # if the vertical celocity of the spear is less than 0, jump to .us_players
     jl   .us_players
-    call find_platform          # render.s, rax = platform or -1
-    cmpq $0, %rax
-    jl   .us_players            # in the air -> check if it hits someone
+    call find_platform                          # call the find_platform from render.s, and store the platform value to rax
+    cmpq $0, %rax                               # if the platform value is lower than 0 (spear is in the air), jump to .us_players 
+    jl   .us_players            
 
-    movq plat_y0(,%rax,8), %rcx # stick in: y = platform top
+    movq plat_y0(,%rax,8), %rcx                 # store the location of the top of the platform into rcx and then into the y value of the spear
     movq %rcx, spear_y(,%rbx,8)
-    movq $0, spear_vx(,%rbx,8)  # stop
+    movq $0, spear_vx(,%rbx,8)                  # stop the spear (vtot = 0)
     movq $0, spear_vy(,%rbx,8)
-    movq $SPEAR_STUCK, spear_state(,%rbx,8) # can be picked up again
+    movq $SPEAR_STUCK, spear_state(,%rbx,8)     # make the spear be stuck so it can be picked up and jump to the next spear
     jmp  .us_next
 
 .us_players:
-    movq $0, %rcx               # chunk
+    movq $0, %rcx                               # check if the spear hits
 .us_hit_loop:
-    cmpq $NUM_CHUNKS, %rcx      # checked all 4 circles?
-    jge  .us_next
+    cmpq $NUM_CHUNKS, %rcx                      # compare the checked chunks with the total amount of chunks
+    jge  .us_next                               # if it's greater or equal, jump to the next spear
 
     movq %rcx, %rax
-    shrq $1, %rax               # player of this chunk
+    shrq $1, %rax                               # rax holds the value of the player being checked
     cmpq spear_owner(,%rbx,8), %rax
-    je   .us_next_chunk         # can't hit yourself
+    je   .us_next_chunk                         # if the player being checked is the spear owner, jump to the next chunck (cannot hurt yourself)
 
-    movq %rdi, %r8              # inside the circle? d2 < r2
-    subq chunk_x(,%rcx,8), %r8  # dx
-    imulq %r8, %r8              # dx * dx
-    movq %rsi, %r9
-    subq chunk_y(,%rcx,8), %r9  # dy
-    imulq %r9, %r9              # dy * dy
-    addq %r9, %r8               # d2 (same test as sample_point in render.s)
-    movq chunk_r(,%rcx,8), %r10
-    imulq %r10, %r10            # r2
-    cmpq %r10, %r8
-    jge  .us_next_chunk         # missed this circle
+    # check if the player (circle) got hit (formula for a circle: xˆ2 + yˆ2 = rˆ2)
+    movq %rdi, %r8                              # get the x coordinate of the spear in r8
+    subq chunk_x(,%rcx,8), %r8                  # subtract the x coordinate of the chunk to r8 (difference in x)
+    imulq %r8, %r8                              # square dx
+    movq %rsi, %r9                              # same process we did for x, but vertically and load the dyˆ2 in r9
+    subq chunk_y(,%rcx,8), %r9  
+    imulq %r9, %r9              
+    addq %r9, %r8                               # add dxˆ2 and dyˆ2
+    movq chunk_r(,%rcx,8), %r10                 # move r into r10 and square it
+    imulq %r10, %r10            
+    cmpq %r10, %r8                              # if, effectively, dxˆ2 + dyˆ2 = rˆ2, then the spear hit, so if it's greater, then it missed and should go to the next chunk
+    jge  .us_next_chunk         
 
-    movq spear_owner(,%rbx,8), %rax # hit! thrower wins the round
+    movq spear_owner(,%rbx,8), %rax             # the player who thre the spear gets put in rax and crowned winner!
     movq %rax, winner
-    incq kills(,%rax,8)         # +1 point
-    movq $SCENE_END, game_state # main.s stops the physics -> frozen end screen
+    incq kills(,%rax,8)                         # increase the kill count (points)
+    movq $SCENE_END, game_state                 # end this scene and jump to the next case
     jmp  .us_next
 
 .us_next_chunk:
-    incq %rcx                   # next circle
+    incq %rcx                                   # next circle
     jmp  .us_hit_loop
 
 .us_next:
-    incq %rbx                   # next spear
+    incq %rbx                                   # next spear
     jmp  .us_loop
 
 .us_done:
@@ -260,66 +260,66 @@ draw_spears:
     movq  %rsp, %rbp
 
     # callee-conventions
-    pushq %rbx                  # spear
-    pushq %r12                  # row
-    pushq %r13                  # col
-    pushq %r14                  # k
+    pushq %rbx                                  # spear
+    pushq %r12                                  # row
+    pushq %r13                                  # col
+    pushq %r14                                  # k = amount of times a character is drawn
 
-    movq $0, %rbx               # spear s = 0
+    movq $0, %rbx                               # spear s = 0
 .ds_loop:
-    cmpq $NUM_SPEARS, %rbx      # drawn all spears?
+    cmpq $NUM_SPEARS, %rbx                      # compare the amount of checked spears with the total amount of spears, if greater or equal, jump to .ds_done
     jge  .ds_done
 
-    movq spear_y(,%rbx,8), %r12
-    shrq $5, %r12               # / 32, subunits -> screen row
-    movq spear_x(,%rbx,8), %r13
-    shrq $4, %r13               # / 16, subunits -> screen column
+    movq spear_y(,%rbx,8), %r12                 # copy the y coordinate of the spear in r12 and divide it by 32 to get the screen row
+    shrq $5, %r12              
+    movq spear_x(,%rbx,8), %r13                 # copy the x coordinate of the spear in r13 and divide it by 16 to get the screen column
+    shrq $4, %r13               
 
-    cmpq $SPEAR_STUCK, spear_state(,%rbx,8) # in the ground -> upright
-    jne  .ds_flat               # otherwise lying flat
+    cmpq $SPEAR_STUCK, spear_state(,%rbx,8)     # if the spear is stuck, it looks upright, so if it isn't, it's laying flat, thus it jumps to .ds_flat
+    jne  .ds_flat               
 
-    movq $1, %r14               # '|' on the 3 rows above
+    movq $1, %r14                               # start drawing the '|' characters from 1, so move 1 into r14
 .ds_up_loop:
-    cmpq $3, %r14               # drawn 3 already?
+    cmpq $3, %r14                               # have three '|' been printed? if more were printed move on to the next spear
     jg   .ds_next
-    movq %r12, %rdi             # mvaddch(row: row - k, col: col, ch: '|')
-    subq %r14, %rdi             # k rows above the platform top
-    movq %r13, %rsi
-    movq $'|', %rdx
-    call mvaddch
-    incq %r14                   # next row up
+    movq %r12, %rdi                             # move the row value onto rdi
+    subq %r14, %rdi                             # subtract k from the rdi
+    movq %r13, %rsi                             # copy the column on rsi
+    movq $'|', %rdx                             # copy the '|' char onto rdx
+    call mvaddch                                # add that character to what is being printed
+    incq %r14                                   # next row up
     jmp  .ds_up_loop
 
 .ds_flat:
-    movq $-2, %r14              # '-' from col - 2 to col + 2
+    movq $-2, %r14                              # want to print '-' from -2 until 2, so move -2 into r14
 .ds_flat_loop:
-    cmpq $2, %r14               # drawn all 5?
+    cmpq $2, %r14                               # if the 5 '-' characters have been drawn, jump to .ds_tip
     jg   .ds_tip
-    movq %r12, %rdi             # mvaddch(row: row, col: col + k, ch: '-')
+    movq %r12, %rdi                             # the same thing we do for the '|' characters, but we do for '-'
     movq %r13, %rsi
     addq %r14, %rsi
     movq $'-', %rdx
     call mvaddch
-    incq %r14                   # next one to the right
+    incq %r14                   
     jmp  .ds_flat_loop
 
 .ds_tip:
-    movq %r12, %rdi             # same row for the tip
-    cmpq $1, spear_dir(,%rbx,8) # pointing right?
+    movq %r12, %rdi                             # start on the same row as the rows of '-' characters, now in rdi
+    cmpq $1, spear_dir(,%rbx,8)                 # if the spear is pointing to the left, jump to .ds_tip_left
     jne  .ds_tip_left
-    movq %r13, %rsi             # mvaddch(row: row, col: col + 2, ch: '>')
+    movq %r13, %rsi                             # overwrite the last '-' character and draw a '>' character in its place
     addq $2, %rsi
-    movq $'>', %rdx             # overwrites the last '-', gives "---->"
+    movq $'>', %rdx             
     call mvaddch
-    jmp  .ds_next
+    jmp  .ds_next                               # jump to the next spear
 .ds_tip_left:
-    movq %r13, %rsi             # mvaddch(row: row, col: col - 2, ch: '<')
+    movq %r13, %rsi                             # the spear is pointing to the left, so it overwrites the first '-' character and replaces it with a '<' character
     subq $2, %rsi
-    movq $'<', %rdx             # overwrites the first '-', gives "<----"
+    movq $'<', %rdx             
     call mvaddch
 
 .ds_next:
-    incq %rbx                   # next spear
+    incq %rbx                                   # next spear
     jmp  .ds_loop
 
 .ds_done:
