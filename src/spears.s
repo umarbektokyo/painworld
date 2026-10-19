@@ -105,7 +105,7 @@ grab_or_throw:
     negq %rax                                   # if the code got here, then the value is negative, so we flip it, taking the absolute value
 .gt_abs_x:
     cmpq $GRAB_RANGE_X, %rax                    # is the horizontal distance from the spear greater or equal than the range? Go to the next spear
-    jge  .gt_next
+    jg  .gt_next
 
     movq spear_y(,%rcx,8), %rax                 # this (from line 110 until 117) is the same we just did, but with the vertical distance
     subq chunk_y(,%r8,8), %rax
