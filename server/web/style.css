@@ -1,0 +1,58 @@
+:root {
+  /* catppuccin mocha, same colours as the terminal theme in app.js */
+  --bg: #11111b;     /* crust, the darkest one */
+  --fg: #cdd6f4;     /* text */
+  --accent: #a6e3a1; /* green, P1 */
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: Menlo, Consolas, "DejaVu Sans Mono", monospace;
+  font-size: 13px;
+  overflow: hidden; /* arrow keys must move slugcats, not the page */
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+main {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+}
+
+#overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(17, 17, 27, 0.85); /* crust, see-through */
+}
+
+#overlay[hidden] { display: none; }
+
+#message { margin: 0; font-size: 15px; text-align: center; padding: 0 16px; }
+
+button {
+  font: inherit;
+  color: var(--bg);
+  background: var(--accent);
+  border: 0;
+  padding: 6px 16px;
+  cursor: pointer;
+}

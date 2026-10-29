@@ -2,3 +2,4 @@ build/
 /rain
 .DS_Store
 /painworld
+server/web/vendor/

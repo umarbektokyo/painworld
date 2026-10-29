@@ -1,0 +1,6 @@
+.git
+build/
+/rain
+/painworld
+server/web/vendor/
+.DS_Store

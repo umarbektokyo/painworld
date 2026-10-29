@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>painworld</title>
+  <meta name="description" content="A two-player terminal game written in x86-64 assembly. Play it in your browser.">
+  <link rel="stylesheet" href="vendor/xterm.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <div id="terminal"></div>
+    <div id="overlay" hidden>
+      <p id="message"></p>
+      <button id="again" type="button">play again</button>
+    </div>
+  </main>
+  <script src="vendor/xterm.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
