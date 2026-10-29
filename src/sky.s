@@ -1,4 +1,4 @@
-# sky.s - the sky "shader"
+# the sky shader
 #
 # runs for every empty cell and says how cloudy that spot is right now (0, 1, 2).
 # like a fragment shader it only knows its position (col, row) and the time
